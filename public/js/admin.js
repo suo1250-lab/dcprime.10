@@ -55,14 +55,17 @@
     const from = fmt(days[0]), to = fmt(days[6]);
     $('weekLabel').textContent = `${from} ~ ${to}`;
 
-    const [tt, lg, ov] = await Promise.all([
+    const [tt, lg, ov, gl] = await Promise.all([
       sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
       sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
       sb.from('attendance_overrides').select('student_id,date,status').gte('date', from).lte('date', to),
+      sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
     ]);
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
     const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
     const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
+    const glAgg = {};
+    (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
 
     const dn = ['일','월','화','수','목','금','토'];
     $('attendanceHead').innerHTML =
@@ -74,7 +77,10 @@
         const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
         const sy = SYMB[st] || SYMB.absent;
         const over = ovMap.has(key) ? ';text-decoration:underline' : '';
-        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}</td>`;
+        const g = glAgg[key];
+        const rate = g && g.total ? Math.round(g.done/g.total*100) : null;
+        const rateTxt = rate==null ? '' : `<div style="font-size:10px;font-weight:600;color:#8b92a4;text-decoration:none">${rate}%</div>`;
+        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}${rateTxt}</td>`;
       }).join('')}
     </tr>`).join('') || `<tr><td>학생이 없습니다.</td></tr>`;
 
@@ -101,8 +107,13 @@
     await fetchStudents();
     const campus = $('studyCampusFilter').value;
     const today = todayStr();
-    const { data: tts } = await sb.from('timetables').select('student_id,slots,campus,seat,submitted').eq('date', today);
-    const ttMap = new Map((tts||[]).map(t => [t.student_id, t]));
+    const [ttRes, glRes] = await Promise.all([
+      sb.from('timetables').select('student_id,slots,campus,seat,submitted').eq('date', today),
+      sb.from('goals').select('student_id,done').eq('date', today),
+    ]);
+    const ttMap = new Map((ttRes.data||[]).map(t => [t.student_id, t]));
+    const goalAgg = {};
+    (glRes.data||[]).forEach(g => { const a = goalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
     const list = studentsCache.filter(s => !campus || s.campus === campus);
 
     $('studySummaryCards').innerHTML = list.map(s => {
@@ -112,12 +123,16 @@
       const totalH = (studied*0.5).toFixed(1);
       const bySub = {}; Object.values(slots).forEach(v => bySub[v] = (bySub[v]||0)+0.5);
       const subTxt = Object.entries(bySub).map(([k,h])=>`${k} ${h}h`).join(' · ') || '기록 없음';
+      const g = goalAgg[s.id];
+      const rate = g && g.total ? Math.round(g.done/g.total*100) : null;
+      const rateColor = rate==null ? '#9098a8' : rate>=80 ? '#10b981' : rate>=50 ? '#f59e0b' : '#e2574c';
       return `<div style="background:#fff;border:1px solid #eceef4;border-radius:14px;padding:16px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div><span style="font-weight:700">${esc(s.name)}</span> <small style="color:#9098a8">${esc(s.grade||'')} ${s.campus?'· '+esc(s.campus):''}</small></div>
           <span style="font-size:22px;font-weight:800;color:#3b82f6">${totalH}h</span>
         </div>
         <div style="margin-top:8px;color:#666;font-size:13px">${esc(subTxt)}</div>
+        <div style="margin-top:8px;font-size:13px;color:${rateColor};font-weight:700">목표 이행률 ${rate==null?'— (목표 없음)':rate+'% ('+g.done+'/'+g.total+')'}</div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
           <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">📷 인증사진 모아보기</button>

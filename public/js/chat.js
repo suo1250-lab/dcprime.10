@@ -1,14 +1,66 @@
 (() => {
   // ── 탭 전환 ─────────────────────────────────────────────
   const tabBtns  = document.querySelectorAll('.tab-btn');
-  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy'), timetable: document.getElementById('tabTimetable') };
+  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy'), timetable: document.getElementById('tabTimetable'), goals: document.getElementById('tabGoals') };
 
   tabBtns.forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.tab;
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === t));
     Object.entries(tabPanels).forEach(([k, p]) => p.classList.toggle('active', k === t));
     if (t === 'study') loadStudyLogs();
+    if (t === 'goals') loadGoals();
   }));
+
+  // ══════════════════════════════════════════════
+  // 오늘의 목표 (계획 → 체크 → 이행률)
+  // ══════════════════════════════════════════════
+  const glTodayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+  async function loadGoals() {
+    const me = window.session.get();
+    const sb = window.sb;
+    const today = glTodayStr();
+    const dateEl = document.getElementById('glDate');
+    if (dateEl) { const d = new Date(); dateEl.textContent = `${today} (${['일','월','화','수','목','금','토'][d.getDay()]})`; }
+    const { data: goals } = await sb.from('goals').select('*')
+      .eq('student_id', me.sid).eq('date', today).order('sort_order').order('created_at');
+    renderGoals(goals || []);
+  }
+
+  function renderGoals(goals) {
+    const list = document.getElementById('glList');
+    const done = goals.filter(g => g.done).length;
+    const rate = goals.length ? Math.round(done / goals.length * 100) : 0;
+    document.getElementById('glBarFill').style.width = rate + '%';
+    document.getElementById('glRate').textContent = rate + '%';
+    if (!goals.length) { list.innerHTML = '<p class="empty-text">오늘의 목표를 추가해보세요.</p>'; return; }
+    list.innerHTML = goals.map(g => `
+      <div class="gl-item">
+        <div class="gl-check ${g.done?'done':''}" data-id="${g.id}" data-done="${g.done?1:0}">${g.done?'✓':''}</div>
+        <span class="gl-text ${g.done?'done':''}">${escHtml(g.text)}</span>
+        <button class="gl-del" data-id="${g.id}">삭제</button>
+      </div>`).join('');
+    list.querySelectorAll('.gl-check').forEach(c => c.addEventListener('click', async () => {
+      await window.sb.from('goals').update({ done: c.dataset.done === '0' }).eq('id', c.dataset.id);
+      loadGoals();
+    }));
+    list.querySelectorAll('.gl-del').forEach(b => b.addEventListener('click', async () => {
+      await window.sb.from('goals').delete().eq('id', b.dataset.id);
+      loadGoals();
+    }));
+  }
+
+  async function addGoal() {
+    const input = document.getElementById('glInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const me = window.session.get();
+    input.value = '';
+    await window.sb.from('goals').insert({ student_id: me.sid, date: glTodayStr(), text });
+    loadGoals();
+  }
+  document.getElementById('glAddBtn')?.addEventListener('click', addGoal);
+  document.getElementById('glInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') addGoal(); });
 
   // ── 공통 ─────────────────────────────────────────────────
   const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
