@@ -55,7 +55,7 @@
   </header>
 
   <!-- NAS 백업 상태 바 -->
-  <div class="backup-bar" id="backupBar">
+  <div class="backup-bar" id="backupBar" style="display:none">
     <div class="backup-bar-left">
       <span class="backup-dot" id="backupDot"></span>
       <span class="backup-label" id="backupLabel">백업 상태 확인 중...</span>
@@ -94,11 +94,10 @@
 
       <!-- 출석 범례 -->
       <div class="attendance-legend">
-        <span class="legend-item"><span class="status-dot status-present"></span>출석</span>
-        <span class="legend-item"><span class="status-dot status-absent"></span>결석</span>
-        <span class="legend-item"><span class="status-dot status-late"></span>지각</span>
-        <span class="legend-item"><span class="status-dot status-none"></span>미체크</span>
-        <span class="legend-hint">셀을 탭하여 상태 변경</span>
+        <span class="legend-item"><b style="color:#10b981">○</b> 출석완료 (시간표+인증)</span>
+        <span class="legend-item"><b style="color:#f59e0b">△</b> 부분 (시간표 제출만)</span>
+        <span class="legend-item"><b style="color:#e2574c">✕</b> 미출석</span>
+        <span class="legend-hint">셀을 탭하여 수동 보정</span>
       </div>
 
       <!-- 출석 테이블 -->
@@ -119,8 +118,10 @@
 
       <div class="panel-toolbar">
         <div class="toolbar-left">
-          <select class="select-input" id="studyStudentFilter">
-            <option value="">전체 학생</option>
+          <select class="select-input" id="studyCampusFilter">
+            <option value="">전체 캠퍼스</option>
+            <option value="능곡">능곡</option>
+            <option value="장곡">장곡</option>
           </select>
         </div>
         <div class="toolbar-right">
@@ -147,8 +148,8 @@
     <div class="admin-panel">
 
       <div class="analysis-header">
-        <h2 class="analysis-page-title">🎓 학생별 AI 분석</h2>
-        <p class="analysis-page-desc">학습 인증 및 채팅 기록을 바탕으로 AI가 학생의 강점과 약점을 분석합니다.</p>
+        <h2 class="analysis-page-title">🎓 학생 상담 기록</h2>
+        <p class="analysis-page-desc">학생을 선택해 상담 내역을 추가하고 누적 기록을 관리합니다.</p>
       </div>
 
       <!-- 학생 선택 카드 -->
@@ -156,21 +157,29 @@
         <p class="empty-text">학생 데이터를 불러오는 중...</p>
       </div>
 
-      <!-- 분석 결과 -->
-      <div class="analysis-result-panel" id="analysisResultPanel" style="display:none">
+      <!-- 상담 패널 -->
+      <div class="analysis-result-panel" id="consultPanel" style="display:none">
         <div class="analysis-result-header">
-          <div>
-            <h3 class="analysis-student-name" id="analysisStudentName">—</h3>
-            <p class="analysis-generated-at" id="analysisGeneratedAt">—</p>
-          </div>
-          <button class="btn-primary-sm" id="reAnalyzeBtn">재분석</button>
+          <h3 class="analysis-student-name" id="consultStudentName">—</h3>
+          <button class="btn-primary-sm" id="addConsultBtn">+ 상담내역 추가</button>
         </div>
-        <div class="analysis-content" id="analysisContent"></div>
-      </div>
 
-      <div class="analysis-loading" id="analysisLoading" style="display:none">
-        <div class="loading-spinner loading-spinner--lg"></div>
-        <p>AI가 분석 중입니다...<br /><small>보통 10~20초 소요됩니다</small></p>
+        <!-- 추가 폼 (토글) -->
+        <div id="consultForm" style="display:none; margin:14px 0; padding:16px; border:1px solid #eceef4; border-radius:12px;">
+          <div class="form-group"><label class="form-label">상담 날짜</label><input class="form-input" id="cDate" type="date" /></div>
+          <div class="form-group"><label class="form-label">상담 내용</label><textarea class="form-textarea" id="cContent" rows="3" placeholder="상담 내용"></textarea></div>
+          <div class="form-group"><label class="form-label">강점</label><textarea class="form-textarea" id="cStrength" rows="2" placeholder="강점"></textarea></div>
+          <div class="form-group"><label class="form-label">약점</label><textarea class="form-textarea" id="cWeakness" rows="2" placeholder="약점"></textarea></div>
+          <div class="form-group"><label class="form-label">다음 목표</label><textarea class="form-textarea" id="cNextGoal" rows="2" placeholder="다음 목표"></textarea></div>
+          <div class="form-group"><label class="form-label">상담인</label><input class="form-input" id="cCounselor" type="text" placeholder="상담 진행자" /></div>
+          <p class="form-error" id="consultFormError"></p>
+          <div class="modal-actions">
+            <button class="modal-btn modal-btn--cancel" id="consultCancel">취소</button>
+            <button class="modal-btn modal-btn--save" id="consultSave">저장</button>
+          </div>
+        </div>
+
+        <div class="analysis-content" id="consultList"></div>
       </div>
     </div>
   </div>
@@ -213,8 +222,12 @@
         <input class="form-input" id="fieldGrade" type="text" placeholder="고1, 중2 등" maxlength="10" />
       </div>
       <div class="form-group">
-        <label class="form-label">학생 특성 <span class="form-hint-inline">(AI 분석에 활용됩니다)</span></label>
-        <textarea class="form-textarea" id="fieldInfo" placeholder="예) 수학 강점, 영어 보완 필요. 성실하고 꼼꼼함." rows="3" maxlength="500"></textarea>
+        <label class="form-label">스터디카페 (소속)</label>
+        <select class="form-input" id="fieldCampus">
+          <option value="">선택 안 함</option>
+          <option value="능곡">능곡</option>
+          <option value="장곡">장곡</option>
+        </select>
       </div>
 
       <p class="form-error" id="studentFormError"></p>
@@ -239,6 +252,8 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/sb.js"></script>
   <script src="/js/admin.js"></script>
 </body>
 </html>
