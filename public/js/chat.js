@@ -1,7 +1,7 @@
 (() => {
   // ── 탭 전환 ─────────────────────────────────────────────
   const tabBtns  = document.querySelectorAll('.tab-btn');
-  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy') };
+  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy'), timetable: document.getElementById('tabTimetable') };
 
   tabBtns.forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.tab;

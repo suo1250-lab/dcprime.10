@@ -8,6 +8,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .tt-wrap { max-width: 560px; margin: 0 auto; padding: 16px 14px 40px; }
+    .tt-datebar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+    .tt-nav { width: 34px; height: 34px; border: 1px solid #e2e5ee; background: #fff; border-radius: 9px; font-size: 20px; color: #444; cursor: pointer; line-height: 1; }
+    .tt-nav:hover { background: #f5f6fa; }
+    .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; min-width: 150px; text-align: center; }
+    .tt-today { border: 1px solid #e2e5ee; background: #fff; border-radius: 9px; padding: 6px 12px; font-size: 13px; color: #555; cursor: pointer; }
+    .tt-today:hover { background: #f5f6fa; }
+    .tt-legend { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
+    .tt-sub { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; background: #f3f4f8; color: #444; transition: all .12s; }
+    .tt-sub .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .tt-sub.sel { border-color: #1f2430; }
+    .tt-grid { border: 1px solid #eceef4; border-radius: 12px; overflow: hidden; }
+    .tt-row { display: grid; grid-template-columns: 60px 1fr; align-items: stretch; border-bottom: 1px solid #f0f1f6; }
+    .tt-row:last-child { border-bottom: none; }
+    .tt-time { font-size: 12px; color: #9098a8; padding: 0 8px; display: flex; align-items: center; justify-content: flex-end; background: #fafbfd; }
+    .tt-cell { min-height: 30px; cursor: pointer; display: flex; align-items: center; padding-left: 12px; font-size: 12.5px; font-weight: 600; color: #fff; transition: background .1s; }
+    .tt-cell.empty { background: #fff; color: transparent; }
+    .tt-cell.empty:hover { background: #f1f3f9; }
+    .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center; }
+    .tt-stat { font-size: 13px; color: #555; background: #f5f6fa; border-radius: 8px; padding: 6px 12px; }
+    .tt-stat b { color: #1f2430; }
+    .tt-hint { text-align: center; font-size: 12px; color: #aab0bf; margin-top: 14px; }
+  </style>
 </head>
 <body class="chat-body">
 
@@ -26,7 +50,7 @@
         </div>
       </div>
       <div class="chat-header-right">
-        <button class="icon-btn" id="clearBtn" title="대화 초기화">
+        <button class="icon-btn" id="clearBtn" title="대화 초기화" style="display:none">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <button class="icon-btn" id="logoutBtn" title="로그아웃">
@@ -37,9 +61,9 @@
 
     <!-- 탭 바 -->
     <div class="tab-bar">
-      <button class="tab-btn active" data-tab="chat">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        AI 채팅
+      <button class="tab-btn active" data-tab="timetable">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        공부 시간표
       </button>
       <button class="tab-btn" data-tab="study">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -48,8 +72,8 @@
     </div>
   </header>
 
-  <!-- ═══════════════ 채팅 탭 ═══════════════ -->
-  <div class="tab-panel active" id="tabChat">
+  <!-- ═══════════════ 채팅 탭 (비활성화: AI 채팅 제거) ═══════════════ -->
+  <div class="tab-panel" id="tabChat" style="display:none">
     <main class="chat-main" id="chatMain">
       <div class="welcome-card" id="welcomeCard">
         <div class="welcome-avatar" id="welcomeAvatar">?</div>
@@ -77,6 +101,25 @@
       </div>
       <p class="chat-footer-hint">AI가 잘못된 정보를 제공할 수 있습니다. 중요한 내용은 선생님께 확인하세요.</p>
     </footer>
+  </div>
+
+  <!-- ═══════════════ 공부 시간표 탭 ═══════════════ -->
+  <div class="tab-panel active" id="tabTimetable">
+    <div class="tt-wrap">
+      <div class="tt-datebar">
+        <button class="tt-nav" id="ttPrev" aria-label="이전 날">‹</button>
+        <div class="tt-date" id="ttDate">날짜</div>
+        <button class="tt-nav" id="ttNext" aria-label="다음 날">›</button>
+        <button class="tt-today" id="ttToday">오늘</button>
+      </div>
+
+      <div class="tt-legend" id="ttLegend"></div>
+
+      <div class="tt-grid" id="ttGrid"></div>
+
+      <div class="tt-summary" id="ttSummary"></div>
+      <p class="tt-hint">시간 칸을 누르면 위에서 선택한 과목으로 칠해집니다. 빈칸 = 공부 안 한 시간. (지우개로 비우기)</p>
+    </div>
   </div>
 
   <!-- ═══════════════ 학습 인증 탭 ═══════════════ -->
@@ -167,5 +210,89 @@
   </div>
 
   <script src="/js/chat.js"></script>
+  <script>
+  (() => {
+    const SUBJECTS = [
+      { key: '국어', color: '#e2574c' },
+      { key: '영어', color: '#3b82f6' },
+      { key: '수학', color: '#10b981' },
+      { key: '과학', color: '#f59e0b' },
+      { key: '기타', color: '#8b5cf6' },
+      { key: '지우개', color: '#cbd2e0', erase: true },
+    ];
+    // 10:00 ~ 22:00, 30분 단위 (24칸)
+    const SLOTS = [];
+    for (let m = 600; m < 1320; m += 30) {
+      const h = Math.floor(m / 60), mm = m % 60;
+      SLOTS.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
+    }
+
+    const grid = document.getElementById('ttGrid');
+    const legend = document.getElementById('ttLegend');
+    const dateEl = document.getElementById('ttDate');
+    const summaryEl = document.getElementById('ttSummary');
+    if (!grid) return;
+
+    let sel = '국어';
+    let cur = new Date();
+
+    const ymd = d => d.toISOString().split('T')[0];
+    const storeKey = d => `tt_${ymd(d)}`;
+    const colorOf = k => (SUBJECTS.find(s => s.key === k) || {}).color || '#fff';
+
+    function load(d) { try { return JSON.parse(localStorage.getItem(storeKey(d))) || {}; } catch { return {}; } }
+    function save(d, data) { localStorage.setItem(storeKey(d), JSON.stringify(data)); }
+
+    function renderLegend() {
+      legend.innerHTML = SUBJECTS.map(s =>
+        `<button class="tt-sub ${s.key===sel?'sel':''}" data-sub="${s.key}">
+           <span class="dot" style="background:${s.color}"></span>${s.key}
+         </button>`).join('');
+      legend.querySelectorAll('.tt-sub').forEach(b => b.addEventListener('click', () => {
+        sel = b.dataset.sub; renderLegend();
+      }));
+    }
+
+    function renderGrid() {
+      const data = load(cur);
+      dateEl.textContent = `${ymd(cur)} (${['일','월','화','수','목','금','토'][cur.getDay()]})`;
+      grid.innerHTML = SLOTS.map(t => {
+        const v = data[t];
+        const style = v ? `background:${colorOf(v)}` : '';
+        return `<div class="tt-row">
+          <div class="tt-time">${t}</div>
+          <div class="tt-cell ${v?'':'empty'}" data-slot="${t}" style="${style}">${v||''}</div>
+        </div>`;
+      }).join('');
+      grid.querySelectorAll('.tt-cell').forEach(c => c.addEventListener('click', () => {
+        const d = load(cur);
+        const slot = c.dataset.slot;
+        if (sel === '지우개') delete d[slot];
+        else d[slot] = sel;
+        save(cur, d); renderGrid();
+      }));
+      renderSummary(data);
+    }
+
+    function renderSummary(data) {
+      const studied = Object.keys(data).length;
+      const totalH = (studied * 0.5).toFixed(1);
+      const bySub = {};
+      Object.values(data).forEach(s => bySub[s] = (bySub[s]||0) + 0.5);
+      const parts = Object.entries(bySub).map(([k,h]) =>
+        `<span class="tt-stat"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colorOf(k)};margin-right:5px"></span>${k} <b>${h}h</b></span>`).join('');
+      summaryEl.innerHTML =
+        `<span class="tt-stat">총 공부 <b>${totalH}시간</b></span>
+         <span class="tt-stat">빈 시간 <b>${(SLOTS.length-studied)*0.5}시간</b></span>` + parts;
+    }
+
+    document.getElementById('ttPrev').addEventListener('click', () => { cur.setDate(cur.getDate()-1); renderGrid(); });
+    document.getElementById('ttNext').addEventListener('click', () => { cur.setDate(cur.getDate()+1); renderGrid(); });
+    document.getElementById('ttToday').addEventListener('click', () => { cur = new Date(); renderGrid(); });
+
+    renderLegend();
+    renderGrid();
+  })();
+  </script>
 </body>
 </html>
