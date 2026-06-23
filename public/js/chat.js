@@ -250,12 +250,26 @@
             <div class="study-log-top">
               <span class="subject-badge" style="background:${subjectColors[log.subject]||'#6B7280'}20;color:${subjectColors[log.subject]||'#6B7280'}">${log.subject}</span>
               <span class="study-log-hours">${log.estimated_hours}시간</span>
+              <button class="del-log-btn" data-id="${log.id}" data-img="${log.image_path||''}" title="삭제"
+                style="margin-left:auto;border:none;background:none;color:#c0c5d0;cursor:pointer;font-size:13px">삭제</button>
             </div>
             <p class="study-log-summary">${escHtml(log.summary || '')}</p>
             <p class="study-log-date">${log.date} · ${fmtTime(new Date(log.created_at))}</p>
           </div>
         </div>
       `).join('');
+
+      list.querySelectorAll('.del-log-btn').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 학습 인증을 삭제할까요?')) return;
+        const sb = window.sb;
+        const img = b.dataset.img;
+        if (img && img.includes('/ten-uploads/')) {
+          const path = img.split('/ten-uploads/')[1].split('?')[0];
+          await sb.storage.from('ten-uploads').remove([decodeURIComponent(path)]);
+        }
+        await sb.from('study_logs').delete().eq('id', b.dataset.id);
+        loadStudyLogs();
+      }));
     } catch (e) { console.error('학습기록 로드 오류', e); }
   };
 
