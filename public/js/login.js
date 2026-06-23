@@ -29,20 +29,21 @@
     loading.classList.add('show');
 
     try {
-      const res  = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pin }) });
-      const data = await res.json();
+      const { data, error } = await window.sb.rpc('verify_pin', { p_pin: pin });
+      const u = (data && data.length) ? data[0] : null;
 
-      if (res.ok && data.success) {
-        if (data.isAdmin) {
-          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">👑</div><span style="font-size:17px;font-weight:700;color:#191F28">${data.name} ${data.title}님, 안녕하세요!</span>`;
-          setTimeout(() => { window.location.href = '/admin'; }, 900);
+      if (!error && u) {
+        window.session.set(u);
+        if (u.role === 'admin') {
+          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">👑</div><span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 원장님, 안녕하세요!</span>`;
+          setTimeout(() => { window.location.href = '/admin.html'; }, 900);
         } else {
-          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">✅</div><span style="font-size:17px;font-weight:700;color:#191F28">${data.name}님, 환영해요!</span>`;
-          setTimeout(() => { window.location.href = '/chat'; }, 800);
+          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">✅</div><span style="font-size:17px;font-weight:700;color:#191F28">${u.sname}님, 환영해요!</span>`;
+          setTimeout(() => { window.location.href = '/chat.html'; }, 800);
         }
       } else {
         loading.classList.remove('show');
-        showError(data.error || '비밀번호가 올바르지 않습니다.');
+        showError(error ? '오류가 발생했습니다.' : '비밀번호가 올바르지 않습니다.');
         pin = '';
         busy = false;
       }
