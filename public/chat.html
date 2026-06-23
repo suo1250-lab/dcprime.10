@@ -13,9 +13,20 @@
     .tt-datebar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
     .tt-nav { width: 34px; height: 34px; border: 1px solid #e2e5ee; background: #fff; border-radius: 9px; font-size: 20px; color: #444; cursor: pointer; line-height: 1; }
     .tt-nav:hover { background: #f5f6fa; }
-    .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; min-width: 150px; text-align: center; }
-    .tt-today { border: 1px solid #e2e5ee; background: #fff; border-radius: 9px; padding: 6px 12px; font-size: 13px; color: #555; cursor: pointer; }
-    .tt-today:hover { background: #f5f6fa; }
+    .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; text-align: center; margin-bottom: 14px; }
+    .tt-setup { display: flex; gap: 10px; margin-bottom: 16px; }
+    .tt-field { flex: 1; background: #f5f6fa; border-radius: 11px; padding: 10px 12px; }
+    .tt-label { display: block; font-size: 12px; color: #8b92a4; font-weight: 600; margin-bottom: 7px; }
+    .tt-campus { display: flex; gap: 6px; }
+    .tt-campus-btn { flex: 1; border: 1px solid #e2e5ee; background: #fff; border-radius: 8px; padding: 7px 0; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+    .tt-campus-btn.sel { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .tt-seatwrap { display: flex; align-items: center; gap: 6px; }
+    .tt-seat { width: 100%; border: 1px solid #e2e5ee; border-radius: 8px; padding: 7px 10px; font-size: 14px; outline: none; }
+    .tt-seat:focus { border-color: #3b82f6; }
+    .tt-seatwrap span { font-size: 13px; color: #8b92a4; }
+    .tt-submit { width: 100%; margin-top: 18px; background: #3b82f6; color: #fff; border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .tt-submit:hover { background: #2f6fe0; }
+    .tt-submit.done { background: #10b981; }
     .tt-legend { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
     .tt-sub { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; background: #f3f4f8; color: #444; transition: all .12s; }
     .tt-sub .dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -106,11 +117,20 @@
   <!-- ═══════════════ 공부 시간표 탭 ═══════════════ -->
   <div class="tab-panel active" id="tabTimetable">
     <div class="tt-wrap">
-      <div class="tt-datebar">
-        <button class="tt-nav" id="ttPrev" aria-label="이전 날">‹</button>
-        <div class="tt-date" id="ttDate">날짜</div>
-        <button class="tt-nav" id="ttNext" aria-label="다음 날">›</button>
-        <button class="tt-today" id="ttToday">오늘</button>
+      <div class="tt-date" id="ttDate">날짜</div>
+
+      <div class="tt-setup">
+        <div class="tt-field">
+          <span class="tt-label">스터디카페</span>
+          <div class="tt-campus">
+            <button class="tt-campus-btn" data-campus="능곡">능곡</button>
+            <button class="tt-campus-btn" data-campus="장곡">장곡</button>
+          </div>
+        </div>
+        <div class="tt-field">
+          <span class="tt-label">좌석</span>
+          <div class="tt-seatwrap"><input id="ttSeat" class="tt-seat" type="number" min="1" inputmode="numeric" placeholder="번호" /><span>번</span></div>
+        </div>
       </div>
 
       <div class="tt-legend" id="ttLegend"></div>
@@ -118,7 +138,9 @@
       <div class="tt-grid" id="ttGrid"></div>
 
       <div class="tt-summary" id="ttSummary"></div>
-      <p class="tt-hint">시간 칸을 누르면 위에서 선택한 과목으로 칠해집니다. 빈칸 = 공부 안 한 시간. (지우개로 비우기)</p>
+
+      <button class="tt-submit" id="ttSubmit">오늘 시간표 제출</button>
+      <p class="tt-hint">시간 칸을 누르면 선택한 과목으로 칠해집니다. 빈칸 = 공부 안 한 시간. (지우개로 비우기)</p>
     </div>
   </div>
 
@@ -231,17 +253,23 @@
     const legend = document.getElementById('ttLegend');
     const dateEl = document.getElementById('ttDate');
     const summaryEl = document.getElementById('ttSummary');
+    const seatEl = document.getElementById('ttSeat');
+    const submitBtn = document.getElementById('ttSubmit');
     if (!grid) return;
 
     let sel = '국어';
-    let cur = new Date();
-
+    const today = new Date();           // 학생은 오늘만 편집 가능
     const ymd = d => d.toISOString().split('T')[0];
-    const storeKey = d => `tt_${ymd(d)}`;
+    const KEY = `tt_${ymd(today)}`;
     const colorOf = k => (SUBJECTS.find(s => s.key === k) || {}).color || '#fff';
 
-    function load(d) { try { return JSON.parse(localStorage.getItem(storeKey(d))) || {}; } catch { return {}; } }
-    function save(d, data) { localStorage.setItem(storeKey(d), JSON.stringify(data)); }
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+    }
+    function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+    function ensure(d) { d.slots ??= {}; return d; }
+
+    dateEl.textContent = `${ymd(today)} (${['일','월','화','수','목','금','토'][today.getDay()]}) · 오늘`;
 
     function renderLegend() {
       legend.innerHTML = SUBJECTS.map(s =>
@@ -253,11 +281,19 @@
       }));
     }
 
+    function renderSetup() {
+      const d = ensure(load());
+      document.querySelectorAll('.tt-campus-btn').forEach(b =>
+        b.classList.toggle('sel', b.dataset.campus === d.campus));
+      if (d.seat != null) seatEl.value = d.seat;
+      if (d.submitted) { submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)'; submitBtn.classList.add('done'); }
+      else { submitBtn.textContent = '오늘 시간표 제출'; submitBtn.classList.remove('done'); }
+    }
+
     function renderGrid() {
-      const data = load(cur);
-      dateEl.textContent = `${ymd(cur)} (${['일','월','화','수','목','금','토'][cur.getDay()]})`;
+      const d = ensure(load());
       grid.innerHTML = SLOTS.map(t => {
-        const v = data[t];
+        const v = d.slots[t];
         const style = v ? `background:${colorOf(v)}` : '';
         return `<div class="tt-row">
           <div class="tt-time">${t}</div>
@@ -265,20 +301,20 @@
         </div>`;
       }).join('');
       grid.querySelectorAll('.tt-cell').forEach(c => c.addEventListener('click', () => {
-        const d = load(cur);
+        const dd = ensure(load());
         const slot = c.dataset.slot;
-        if (sel === '지우개') delete d[slot];
-        else d[slot] = sel;
-        save(cur, d); renderGrid();
+        if (sel === '지우개') delete dd.slots[slot];
+        else dd.slots[slot] = sel;
+        save(dd); renderGrid();
       }));
-      renderSummary(data);
+      renderSummary(d.slots);
     }
 
-    function renderSummary(data) {
-      const studied = Object.keys(data).length;
+    function renderSummary(slots) {
+      const studied = Object.keys(slots).length;
       const totalH = (studied * 0.5).toFixed(1);
       const bySub = {};
-      Object.values(data).forEach(s => bySub[s] = (bySub[s]||0) + 0.5);
+      Object.values(slots).forEach(s => bySub[s] = (bySub[s]||0) + 0.5);
       const parts = Object.entries(bySub).map(([k,h]) =>
         `<span class="tt-stat"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colorOf(k)};margin-right:5px"></span>${k} <b>${h}h</b></span>`).join('');
       summaryEl.innerHTML =
@@ -286,11 +322,26 @@
          <span class="tt-stat">빈 시간 <b>${(SLOTS.length-studied)*0.5}시간</b></span>` + parts;
     }
 
-    document.getElementById('ttPrev').addEventListener('click', () => { cur.setDate(cur.getDate()-1); renderGrid(); });
-    document.getElementById('ttNext').addEventListener('click', () => { cur.setDate(cur.getDate()+1); renderGrid(); });
-    document.getElementById('ttToday').addEventListener('click', () => { cur = new Date(); renderGrid(); });
+    // 스터디카페 캠퍼스 선택
+    document.querySelectorAll('.tt-campus-btn').forEach(b => b.addEventListener('click', () => {
+      const d = ensure(load()); d.campus = b.dataset.campus; save(d); renderSetup();
+    }));
+    // 좌석 번호
+    seatEl.addEventListener('input', () => {
+      const d = ensure(load()); d.seat = seatEl.value; save(d);
+    });
+    // 오늘 시간표 제출 (= 1차 출석)
+    submitBtn.addEventListener('click', () => {
+      const d = ensure(load());
+      if (!d.campus) { alert('스터디카페(능곡/장곡)를 선택해주세요.'); return; }
+      if (!seatEl.value) { alert('좌석 번호를 입력해주세요.'); return; }
+      d.submitted = true; d.submittedAt = new Date().toISOString();
+      save(d); renderSetup();
+      alert('오늘 시간표가 제출되었습니다. (1차 출석 완료)');
+    });
 
     renderLegend();
+    renderSetup();
     renderGrid();
   })();
   </script>
