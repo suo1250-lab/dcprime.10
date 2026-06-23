@@ -206,7 +206,7 @@
     await fetchStudents();
     const grid = $('studentSelectGrid');
     grid.innerHTML = studentsCache.map(s => `<button class="student-select-card" data-id="${s.id}">
-      <span class="select-avatar">${esc(s.name.charAt(0))}</span>
+      <span class="select-avatar" style="font-size:13px">${esc(s.campus || '—')}</span>
       <span class="select-name">${esc(s.name)}</span>
       <span class="select-grade">${esc(s.grade||'')}</span>
     </button>`).join('') || '<p class="empty-text">학생이 없습니다.</p>';
