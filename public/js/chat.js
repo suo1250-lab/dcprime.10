@@ -247,27 +247,6 @@
     } catch {}
   };
 
-  // ══════════════════════════════════════════════
-  // 초기화
-  // ══════════════════════════════════════════════
-  (async () => {
-    try {
-      const meRes = await fetch('/api/me');
-      if (!meRes.ok) { window.location.href = '/'; return; }
-      const me = await meRes.json();
-      if (me.isAdmin) { window.location.href = '/admin'; return; }
-
-      headerName.textContent = `${me.name} 학생`;
-      headerGrade.textContent = me.grade || 'DC Prime';
-      welcomeName.textContent = `안녕하세요, ${me.name} 학생!`;
-      welcomeAvatar.textContent = me.name.charAt(0);
-
-      const msgs = await (await fetch('/api/messages')).json();
-      if (msgs.length) {
-        welcomeCard.style.display = 'none';
-        msgs.forEach(m => appendMsg(m.role, m.content, m.createdAt, false));
-        scrollBottom(false);
-      }
-    } catch { window.location.href = '/'; }
-  })();
+  // 초기화: 인증/헤더/로그아웃은 Supabase 세션(chat.html 인라인 스크립트)에서 처리.
+  // (옛 Express /api/me 인증 제거 — 서버리스 전환)
 })();
