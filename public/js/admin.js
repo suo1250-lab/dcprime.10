@@ -118,11 +118,69 @@
           <span style="font-size:22px;font-weight:800;color:#3b82f6">${totalH}h</span>
         </div>
         <div style="margin-top:8px;color:#666;font-size:13px">${esc(subTxt)}</div>
-        ${tt?.submitted ? `<span style="display:inline-block;margin-top:8px;font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="display:inline-block;margin-top:8px;font-size:12px;color:#9098a8">미제출</span>'}
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
+          <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">📷 인증사진 모아보기</button>
+        </div>
       </div>`;
     }).join('') || '<p class="empty-text">해당 학생이 없습니다.</p>';
 
-    $('studyLogList').innerHTML = '<p class="empty-text">사진 인증(2차)·ZIP 다운로드는 사진 업로드 연동 후 제공됩니다.</p>';
+    document.querySelectorAll('.photos-btn').forEach(b => b.addEventListener('click', () => showStudentPhotos(b.dataset.id, b.dataset.name)));
+    $('studyLogList').innerHTML = '<p class="empty-text">학생 카드의 "인증사진 모아보기"를 누르면 날짜별 사진이 표시됩니다.</p>';
+  }
+
+  // 학생 인증사진: 날짜별 표출 + ZIP 다운로드
+  async function showStudentPhotos(sid, name) {
+    const wrap = $('studyLogList');
+    wrap.innerHTML = '<p class="empty-text">불러오는 중...</p>';
+    const { data: logs } = await sb.from('study_logs').select('*')
+      .eq('student_id', sid).not('image_path', 'is', null).order('date', { ascending: false });
+    if (!logs || !logs.length) { wrap.innerHTML = `<p class="empty-text">${esc(name)} 학생의 인증 사진이 없습니다.</p>`; return; }
+
+    // 날짜별 그룹
+    const byDate = {};
+    logs.forEach(l => { (byDate[l.date] ||= []).push(l); });
+
+    wrap.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 class="section-subtitle" style="margin:0">${esc(name)} 인증사진 (${logs.length}장)</h3>
+        <button class="btn-primary-sm" id="zipBtn">⬇ 전체 ZIP 다운로드</button>
+      </div>` +
+      Object.entries(byDate).map(([date, arr]) => `
+        <div style="margin-bottom:16px">
+          <p style="font-weight:700;color:#444;margin-bottom:8px">${esc(date)}</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+            ${arr.map(l => `<a href="${esc(l.image_path)}" target="_blank"><img src="${esc(l.image_path)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #eceef4" /></a>`).join('')}
+          </div>
+        </div>`).join('');
+
+    $('zipBtn').addEventListener('click', () => downloadZip(name, logs));
+  }
+
+  async function downloadZip(name, logs) {
+    const btn = $('zipBtn');
+    btn.disabled = true; btn.textContent = 'ZIP 생성 중...';
+    try {
+      const zip = new JSZip();
+      const counts = {};
+      for (const l of logs) {
+        try {
+          const res = await fetch(l.image_path);
+          const blob = await res.blob();
+          const ext = (l.image_path.split('.').pop() || 'jpg').split('?')[0];
+          counts[l.date] = (counts[l.date] || 0) + 1;
+          zip.file(`${name}_${l.date}_${counts[l.date]}.${ext}`, blob);
+        } catch (e) { console.error('이미지 로드 실패', l.image_path, e); }
+      }
+      const out = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(out);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${name}_인증사진.zip`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇ 전체 ZIP 다운로드';
+    }
   }
   $('studyCampusFilter')?.addEventListener('change', loadStudy);
   $('refreshStudyBtn')?.addEventListener('click', loadStudy);

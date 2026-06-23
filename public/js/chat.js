@@ -182,15 +182,26 @@
     saveSpinner.style.display = '';
     saveStudyBtn.disabled = true;
 
-    const form = new FormData();
-    if (currentFile) form.append('image', currentFile);
-    form.append('subject', subject);
-    form.append('hours', hours);
-    form.append('memo', studyMemo.value);
-
     try {
-      const res = await fetch('/api/study/submit', { method: 'POST', body: form });
-      if (!res.ok) throw new Error((await res.json()).error);
+      const me = window.session.get();
+      const sb = window.sb;
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+      let image_path = null;
+      if (currentFile) {
+        const ext = (currentFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${me.sid}/${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('ten-uploads').upload(path, currentFile, { upsert: true, contentType: currentFile.type });
+        if (upErr) throw new Error(upErr.message);
+        image_path = sb.storage.from('ten-uploads').getPublicUrl(path).data.publicUrl;
+      }
+
+      const { error } = await sb.from('study_logs').insert({
+        student_id: me.sid, date: today, image_path,
+        subject, estimated_hours: parseFloat(hours) || 1, summary: studyMemo.value || '',
+      });
+      if (error) throw new Error(error.message);
 
       // 폼 초기화
       currentFile = null;
@@ -224,27 +235,28 @@
 
   const loadStudyLogs = async () => {
     try {
-      const res  = await fetch('/api/study/logs/me');
-      const logs = await res.json();
+      const me = window.session.get();
+      const { data: logs } = await window.sb.from('study_logs')
+        .select('*').eq('student_id', me.sid).order('created_at', { ascending: false });
       const list = document.getElementById('todayLogsList');
-      if (!logs.length) { list.innerHTML = '<p class="empty-text">아직 학습 인증 기록이 없어요.</p>'; return; }
+      if (!logs || !logs.length) { list.innerHTML = '<p class="empty-text">아직 학습 인증 기록이 없어요.</p>'; return; }
 
       const subjectColors = { '국어':'#FF6B35','영어':'#00B493','수학':'#0064FF','과학':'#8B5CF6','사회':'#F59E0B','기타':'#6B7280' };
 
       list.innerHTML = logs.map(log => `
         <div class="study-log-item">
-          ${log.imagePath ? `<img class="study-log-thumb" src="${log.imagePath}" alt="학습 사진" />` : '<div class="study-log-thumb study-log-thumb--empty">📝</div>'}
+          ${log.image_path ? `<img class="study-log-thumb" src="${log.image_path}" alt="학습 사진" />` : '<div class="study-log-thumb study-log-thumb--empty">📝</div>'}
           <div class="study-log-info">
             <div class="study-log-top">
               <span class="subject-badge" style="background:${subjectColors[log.subject]||'#6B7280'}20;color:${subjectColors[log.subject]||'#6B7280'}">${log.subject}</span>
-              <span class="study-log-hours">${log.estimatedHours}시간</span>
+              <span class="study-log-hours">${log.estimated_hours}시간</span>
             </div>
-            <p class="study-log-summary">${escHtml(log.summary)}</p>
-            <p class="study-log-date">${log.date} · ${fmtTime(new Date(log.createdAt))}</p>
+            <p class="study-log-summary">${escHtml(log.summary || '')}</p>
+            <p class="study-log-date">${log.date} · ${fmtTime(new Date(log.created_at))}</p>
           </div>
         </div>
       `).join('');
-    } catch {}
+    } catch (e) { console.error('학습기록 로드 오류', e); }
   };
 
   // 초기화: 인증/헤더/로그아웃은 Supabase 세션(chat.html 인라인 스크립트)에서 처리.
