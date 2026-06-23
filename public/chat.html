@@ -231,9 +231,25 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/sb.js"></script>
   <script src="/js/chat.js"></script>
   <script>
-  (() => {
+  (async () => {
+    // 로그인 가드
+    const me = window.session.require('student');
+    if (!me) return;
+    const sb = window.sb;
+
+    // 헤더 / 로그아웃 (서버리스)
+    const nameEl = document.getElementById('headerName');
+    const gradeEl = document.getElementById('headerGrade');
+    if (nameEl) nameEl.textContent = `${me.sname} 학생`;
+    if (gradeEl) gradeEl.textContent = me.grade || '';
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
+      e.preventDefault(); window.session.clear(); window.location.href = '/';
+    }, true);
+
     const SUBJECTS = [
       { key: '국어', color: '#e2574c' },
       { key: '영어', color: '#3b82f6' },
@@ -259,17 +275,26 @@
 
     let sel = '국어';
     const today = new Date();           // 학생은 오늘만 편집 가능
-    const ymd = d => d.toISOString().split('T')[0];
-    const KEY = `tt_${ymd(today)}`;
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const TODAY = ymd(today);
     const colorOf = k => (SUBJECTS.find(s => s.key === k) || {}).color || '#fff';
 
-    function load() {
-      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
-    }
-    function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
-    function ensure(d) { d.slots ??= {}; return d; }
+    // 메모리 상태 (Supabase에서 로드)
+    let row = { slots: {}, campus: null, seat: '', submitted: false };
 
-    dateEl.textContent = `${ymd(today)} (${['일','월','화','수','목','금','토'][today.getDay()]}) · 오늘`;
+    dateEl.textContent = `${TODAY} (${['일','월','화','수','목','금','토'][today.getDay()]}) · 오늘`;
+
+    async function loadDay() {
+      const { data } = await sb.from('timetables').select('*')
+        .eq('student_id', me.sid).eq('date', TODAY).maybeSingle();
+      if (data) row = { slots: data.slots || {}, campus: data.campus, seat: data.seat || '', submitted: !!data.submitted };
+    }
+
+    async function persist(extra) {
+      const payload = { student_id: me.sid, date: TODAY, slots: row.slots, campus: row.campus, seat: row.seat, submitted: row.submitted, ...(extra||{}) };
+      const { error } = await sb.from('timetables').upsert(payload, { onConflict: 'student_id,date' });
+      if (error) console.error('시간표 저장 오류', error);
+    }
 
     function renderLegend() {
       legend.innerHTML = SUBJECTS.map(s =>
@@ -282,18 +307,16 @@
     }
 
     function renderSetup() {
-      const d = ensure(load());
       document.querySelectorAll('.tt-campus-btn').forEach(b =>
-        b.classList.toggle('sel', b.dataset.campus === d.campus));
-      if (d.seat != null) seatEl.value = d.seat;
-      if (d.submitted) { submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)'; submitBtn.classList.add('done'); }
+        b.classList.toggle('sel', b.dataset.campus === row.campus));
+      if (row.seat != null) seatEl.value = row.seat;
+      if (row.submitted) { submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)'; submitBtn.classList.add('done'); }
       else { submitBtn.textContent = '오늘 시간표 제출'; submitBtn.classList.remove('done'); }
     }
 
     function renderGrid() {
-      const d = ensure(load());
       grid.innerHTML = SLOTS.map(t => {
-        const v = d.slots[t];
+        const v = row.slots[t];
         const style = v ? `background:${colorOf(v)}` : '';
         return `<div class="tt-row">
           <div class="tt-time">${t}</div>
@@ -301,13 +324,12 @@
         </div>`;
       }).join('');
       grid.querySelectorAll('.tt-cell').forEach(c => c.addEventListener('click', () => {
-        const dd = ensure(load());
         const slot = c.dataset.slot;
-        if (sel === '지우개') delete dd.slots[slot];
-        else dd.slots[slot] = sel;
-        save(dd); renderGrid();
+        if (sel === '지우개') delete row.slots[slot];
+        else row.slots[slot] = sel;
+        renderGrid(); persist();
       }));
-      renderSummary(d.slots);
+      renderSummary(row.slots);
     }
 
     function renderSummary(slots) {
@@ -324,22 +346,25 @@
 
     // 스터디카페 캠퍼스 선택
     document.querySelectorAll('.tt-campus-btn').forEach(b => b.addEventListener('click', () => {
-      const d = ensure(load()); d.campus = b.dataset.campus; save(d); renderSetup();
+      row.campus = b.dataset.campus; renderSetup(); persist();
     }));
     // 좌석 번호
+    let seatTimer;
     seatEl.addEventListener('input', () => {
-      const d = ensure(load()); d.seat = seatEl.value; save(d);
+      row.seat = seatEl.value;
+      clearTimeout(seatTimer); seatTimer = setTimeout(persist, 400);
     });
     // 오늘 시간표 제출 (= 1차 출석)
-    submitBtn.addEventListener('click', () => {
-      const d = ensure(load());
-      if (!d.campus) { alert('스터디카페(능곡/장곡)를 선택해주세요.'); return; }
+    submitBtn.addEventListener('click', async () => {
+      if (!row.campus) { alert('스터디카페(능곡/장곡)를 선택해주세요.'); return; }
       if (!seatEl.value) { alert('좌석 번호를 입력해주세요.'); return; }
-      d.submitted = true; d.submittedAt = new Date().toISOString();
-      save(d); renderSetup();
+      row.submitted = true;
+      await persist({ submitted_at: new Date().toISOString() });
+      renderSetup();
       alert('오늘 시간표가 제출되었습니다. (1차 출석 완료)');
     });
 
+    await loadDay();
     renderLegend();
     renderSetup();
     renderGrid();
