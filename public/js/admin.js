@@ -84,18 +84,62 @@
       }).join('')}
     </tr>`).join('') || `<tr><td>학생이 없습니다.</td></tr>`;
 
-    document.querySelectorAll('.att-cell').forEach(c => c.addEventListener('click', () => cycleOverride(c.dataset.sid, c.dataset.date, ovMap)));
+    document.querySelectorAll('.att-cell').forEach(c => c.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openStatusMenu(c, c.dataset.sid, c.dataset.date, ovMap.has(c.dataset.sid+'|'+c.dataset.date) ? ovMap.get(c.dataset.sid+'|'+c.dataset.date) : null);
+    }));
   }
 
-  async function cycleOverride(sid, date, ovMap) {
-    const key = sid+'|'+date;
-    const order = ['present','partial','absent'];
-    let next;
-    if (!ovMap.has(key)) next = 'present';
-    else { const i = order.indexOf(ovMap.get(key)); next = i >= order.length-1 ? null : order[i+1]; }
-    if (next === null) await sb.from('attendance_overrides').delete().eq('student_id', sid).eq('date', date);
-    else await sb.from('attendance_overrides').upsert({ student_id: sid, date, status: next }, { onConflict: 'student_id,date' });
-    loadAttendance();
+  // 셀 탭 → 선택 메뉴 (오터치로 바로 안 바뀌게)
+  function closeStatusMenu() { document.getElementById('attMenu')?.remove(); }
+  function openStatusMenu(cell, sid, date, cur) {
+    closeStatusMenu();
+    const r = cell.getBoundingClientRect();
+    const opts = [
+      { v:'present', t:'○ 출석', c:'#10b981' },
+      { v:'partial', t:'△ 부분', c:'#f59e0b' },
+      { v:'absent',  t:'✕ 미출석', c:'#e2574c' },
+      { v:'',        t:'↩ 자동으로', c:'#6b7280' },
+    ];
+    const menu = document.createElement('div');
+    menu.id = 'attMenu';
+    menu.style.cssText = 'position:fixed;z-index:1000;background:#fff;border:1px solid #e2e5ee;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;min-width:150px';
+    menu.innerHTML = opts.map(o => `<button class="att-opt" data-v="${o.v}" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:14px;color:${o.c};font-weight:700;cursor:pointer;text-align:left">${o.t}${(cur||'')===o.v?' · 현재':''}</button>`).join('');
+    document.body.appendChild(menu);
+    let top = r.bottom + 4, left = r.left;
+    if (top + menu.offsetHeight > window.innerHeight) top = r.top - menu.offsetHeight - 4;
+    if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 8;
+    menu.style.top = top + 'px'; menu.style.left = Math.max(8, left) + 'px';
+    menu.querySelectorAll('.att-opt').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeStatusMenu();
+      applyStatus(sid, date, b.dataset.v || null, cur);
+    }));
+    setTimeout(() => document.addEventListener('click', closeStatusMenu, { once: true }), 0);
+  }
+
+  async function setOverride(sid, date, status) {
+    if (status === null) await sb.from('attendance_overrides').delete().eq('student_id', sid).eq('date', date);
+    else await sb.from('attendance_overrides').upsert({ student_id: sid, date, status }, { onConflict: 'student_id,date' });
+    await loadAttendance();
+  }
+  async function applyStatus(sid, date, status, prev) {
+    if (status === (prev || null)) return; // 변화 없음
+    await setOverride(sid, date, status);
+    showUndoToast(sid, date, prev || null);
+  }
+
+  let undoTimer;
+  function showUndoToast(sid, date, prev) {
+    document.getElementById('attToast')?.remove();
+    clearTimeout(undoTimer);
+    const toast = document.createElement('div');
+    toast.id = 'attToast';
+    toast.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:1100;background:#1f2430;color:#fff;padding:12px 18px;border-radius:12px;display:flex;align-items:center;gap:14px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)';
+    toast.innerHTML = '<span>출석이 변경되었습니다.</span><button id="undoBtn" style="background:none;border:none;color:#7fb3ff;font-weight:700;cursor:pointer">되돌리기</button>';
+    document.body.appendChild(toast);
+    document.getElementById('undoBtn').addEventListener('click', () => { toast.remove(); clearTimeout(undoTimer); setOverride(sid, date, prev); });
+    undoTimer = setTimeout(() => toast.remove(), 4000);
   }
 
   $('weekPrev')?.addEventListener('click', () => { weekStart.setDate(weekStart.getDate()-7); loadAttendance(); });
