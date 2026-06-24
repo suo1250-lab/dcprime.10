@@ -218,7 +218,7 @@
         <div style="margin-top:8px;font-size:13px;color:${rateColor};font-weight:700">목표 이행률 ${rate==null?'— (목표 없음)':rate+'% ('+g.done+'/'+g.total+')'}</div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
-          <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">📷 인증사진 모아보기</button>
+          <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">인증사진 모아보기</button>
         </div>
       </div>`;
     }).join('') || '<p class="empty-text">해당 학생이 없습니다.</p>';
@@ -242,7 +242,7 @@
     wrap.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h3 class="section-subtitle" style="margin:0">${esc(name)} 인증사진 (${logs.length}장)</h3>
-        <button class="btn-primary-sm" id="zipBtn">⬇ 전체 ZIP 다운로드</button>
+        <button class="btn-primary-sm" id="zipBtn">전체 ZIP 다운로드</button>
       </div>` +
       Object.entries(byDate).map(([date, arr]) => `
         <div style="margin-bottom:16px">
@@ -277,7 +277,7 @@
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     } finally {
-      btn.disabled = false; btn.textContent = '⬇ 전체 ZIP 다운로드';
+      btn.disabled = false; btn.textContent = '전체 ZIP 다운로드';
     }
   }
   $('studyCampusFilter')?.addEventListener('change', loadStudy);

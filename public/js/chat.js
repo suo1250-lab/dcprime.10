@@ -297,7 +297,7 @@
 
       list.innerHTML = logs.map(log => `
         <div class="study-log-item">
-          ${log.image_path ? `<img class="study-log-thumb" src="${log.image_path}" alt="학습 사진" />` : '<div class="study-log-thumb study-log-thumb--empty">📝</div>'}
+          ${log.image_path ? `<img class="study-log-thumb" src="${log.image_path}" alt="학습 사진" />` : '<div class="study-log-thumb study-log-thumb--empty"></div>'}
           <div class="study-log-info">
             <div class="study-log-top">
               <span class="subject-badge" style="background:${subjectColors[log.subject]||'#6B7280'}20;color:${subjectColors[log.subject]||'#6B7280'}">${log.subject}</span>

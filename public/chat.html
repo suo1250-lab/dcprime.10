@@ -108,10 +108,10 @@
         <h2 class="welcome-title" id="welcomeName">안녕하세요!</h2>
         <p class="welcome-desc">궁금한 것을 무엇이든 물어보세요.<br />학습 분석, 질문, 개념 설명 모두 도와드려요.</p>
         <div class="welcome-chips">
-          <button class="chip" data-msg="오늘 학습 계획 세워줘">📅 오늘 학습 계획</button>
-          <button class="chip" data-msg="내 약점 과목 분석해줘">📊 약점 분석</button>
-          <button class="chip" data-msg="이해 안 되는 개념 도와줘">💡 개념 설명</button>
-          <button class="chip" data-msg="시험 대비 체크리스트 만들어줘">✅ 시험 대비</button>
+          <button class="chip" data-msg="오늘 학습 계획 세워줘">오늘 학습 계획</button>
+          <button class="chip" data-msg="내 약점 과목 분석해줘">약점 분석</button>
+          <button class="chip" data-msg="이해 안 되는 개념 도와줘">개념 설명</button>
+          <button class="chip" data-msg="시험 대비 체크리스트 만들어줘">시험 대비</button>
         </div>
       </div>
       <div id="messagesList"></div>
@@ -183,7 +183,7 @@
     <div class="study-container">
 
       <div class="study-form-card">
-        <h2 class="study-section-title">📝 오늘 학습 인증</h2>
+        <h2 class="study-section-title">오늘 학습 인증</h2>
         <p class="study-section-desc">오늘 공부한 내용을 기록해두세요.</p>
 
         <!-- 사진 업로드 (선택) -->
@@ -192,7 +192,7 @@
           <div class="upload-area" id="uploadArea">
             <input type="file" id="studyFileInput" accept="image/*" capture="environment" hidden />
             <div class="upload-placeholder" id="uploadPlaceholder">
-              <div class="upload-icon">📷</div>
+              <div class="upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.8"/></svg></div>
               <p class="upload-text">탭하여 사진 추가</p>
               <p class="upload-subtext">JPEG, PNG, WEBP · 최대 15MB</p>
             </div>
@@ -255,7 +255,6 @@
   <!-- 대화 초기화 모달 -->
   <div class="modal-overlay" id="clearModal">
     <div class="modal">
-      <div class="modal-icon">🗑️</div>
       <h3 class="modal-title">대화를 초기화할까요?</h3>
       <p class="modal-desc">모든 대화 이력이 삭제됩니다.<br />이 작업은 되돌릴 수 없어요.</p>
       <div class="modal-actions">
