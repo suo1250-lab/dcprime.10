@@ -35,10 +35,10 @@
       if (!error && u) {
         window.session.set(u);
         if (u.role === 'admin') {
-          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">👑</div><span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 원장님, 안녕하세요!</span>`;
+          loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 원장님, 안녕하세요!</span>`;
           setTimeout(() => { window.location.href = '/admin.html'; }, 900);
         } else {
-          loading.innerHTML = `<div style="font-size:36px;margin-bottom:10px">✅</div><span style="font-size:17px;font-weight:700;color:#191F28">${u.sname}님, 환영해요!</span>`;
+          loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname}님, 환영해요!</span>`;
           setTimeout(() => { window.location.href = '/chat.html'; }, 800);
         }
       } else {
