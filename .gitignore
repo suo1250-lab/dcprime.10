@@ -23,3 +23,6 @@ Thumbs.db
 # 로그
 *.log
 npm-debug.log*
+
+# 윈도우 NAS 경로 잔재(로컬 junk)
+Z:\DCPRIME/
