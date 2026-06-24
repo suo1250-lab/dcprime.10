@@ -77,11 +77,6 @@
           <button class="btn-ghost-sm" id="todayBtn">오늘</button>
         </div>
         <div class="toolbar-right">
-          <label class="btn-ghost-sm btn-import" for="importExcel">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            가져오기
-          </label>
-          <input type="file" id="importExcel" accept=".xlsx,.xls" hidden />
           <button class="btn-primary-sm" id="exportExcel">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             내보내기
@@ -251,6 +246,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="/js/sb.js"></script>
   <script src="/js/admin.js"></script>
 </body>

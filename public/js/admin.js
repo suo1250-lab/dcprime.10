@@ -102,6 +102,45 @@
   $('weekNext')?.addEventListener('click', () => { weekStart.setDate(weekStart.getDate()+7); loadAttendance(); });
   $('todayBtn')?.addEventListener('click', () => { weekStart = startOfWeek(new Date()); loadAttendance(); });
 
+  // 출석표 엑셀 내보내기 (현재 주)
+  $('exportExcel')?.addEventListener('click', async () => {
+    await fetchStudents();
+    const days = [...Array(7)].map((_, i) => { const d = new Date(weekStart); d.setDate(d.getDate()+i); return d; });
+    const from = fmt(days[0]), to = fmt(days[6]);
+    const [tt, lg, ov, gl] = await Promise.all([
+      sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
+      sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
+      sb.from('attendance_overrides').select('student_id,date,status').gte('date', from).lte('date', to),
+      sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
+    ]);
+    const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
+    const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
+    const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
+    const glAgg = {};
+    (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
+
+    const dn = ['일','월','화','수','목','금','토'];
+    const SYM = { present:'○', partial:'△', absent:'✕' };
+    const header = ['학생','캠퍼스', ...days.map(d => `${d.getMonth()+1}/${d.getDate()}(${dn[d.getDay()]})`)];
+    const rows = [header];
+    studentsCache.forEach(s => {
+      const row = [s.name, s.campus || ''];
+      days.forEach(d => {
+        const date = fmt(d), key = s.id+'|'+date;
+        const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
+        const g = glAgg[key];
+        const rate = g && g.total ? ` ${Math.round(g.done/g.total*100)}%` : '';
+        row.push(SYM[st] + rate);
+      });
+      rows.push(row);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 10 }, { wch: 7 }, ...days.map(() => ({ wch: 11 }))];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '출석');
+    XLSX.writeFile(wb, `출석부_${from}_${to}.xlsx`);
+  });
+
   // ═══════════════ 학습 현황 ═══════════════
   async function loadStudy() {
     await fetchStudents();
