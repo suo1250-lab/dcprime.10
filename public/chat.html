@@ -311,7 +311,7 @@
     const TODAY = ymd(today);
     const baseKey = k => k ? k.split(':')[0] : k;
     const colorOf = k => (SUBJECTS.find(s => s.key === baseKey(k)) || {}).color || '#fff';
-    const displayOf = k => k ? k.split(':')[0] : '';
+    const displayOf = k => { if (!k) return ''; const [base, ...rest] = k.split(':'); return rest.length ? `${base}(${rest.join(':')})` : base; };
 
     // 메모리 상태 (Supabase에서 로드)
     let row = { slots: {}, campus: null, seat: '', submitted: false };
