@@ -218,14 +218,38 @@
         <div style="margin-top:8px;font-size:13px;color:${rateColor};font-weight:700">목표 이행률 ${rate==null?'— (목표 없음)':rate+'% ('+g.done+'/'+g.total+')'}</div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
+          <button class="btn-ghost-sm tt-view-btn" data-id="${s.id}" data-name="${esc(s.name)}">시간표 보기</button>
           <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">인증사진 모아보기</button>
         </div>
       </div>`;
     }).join('') || '<p class="empty-text">해당 학생이 없습니다.</p>';
 
+    document.querySelectorAll('.tt-view-btn').forEach(b => b.addEventListener('click', () => showTimetableModal(b.dataset.name, ttMap.get(b.dataset.id)?.slots || {})));
     document.querySelectorAll('.photos-btn').forEach(b => b.addEventListener('click', () => showStudentPhotos(b.dataset.id, b.dataset.name)));
     $('studyLogList').innerHTML = '<p class="empty-text">학생 카드의 "인증사진 모아보기"를 누르면 날짜별 사진이 표시됩니다.</p>';
   }
+
+  // 시간표 모달
+  const TT_COLORS = { '스카':'#3b82f6','식사':'#f59e0b','학원수업':'#10b981','기타':'#8b5cf6','국어':'#e2574c','영어':'#3b82f6','수학':'#10b981','과학':'#f59e0b' };
+  const ttSlots = (() => { const a = []; for (let m=600;m<1320;m+=30){ const h=Math.floor(m/60),mm=m%60; a.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`); } return a; })();
+
+  function showTimetableModal(name, slots) {
+    const baseKey = k => k ? k.split(':')[0] : k;
+    const colorOf = k => TT_COLORS[baseKey(k)] || '#8b5cf6';
+    const displayOf = k => { if(!k) return ''; const [b,...r]=k.split(':'); return r.length?`${b}(${r.join(':')})`:b; };
+    $('ttModalTitle').textContent = `${name} 오늘 시간표`;
+    $('ttModalContent').innerHTML = ttSlots.map(t => {
+      const v = slots[t];
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:12px;color:#9098a8;width:38px;flex-shrink:0">${t}</span>
+        <div style="flex:1;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:600;${v?`background:${colorOf(v)};color:#fff`:'background:#f5f6fa;color:#d0d4df'}">${v?displayOf(v):''}</div>
+      </div>`;
+    }).join('');
+    $('ttModal').classList.add('show');
+  }
+
+  $('ttModalClose')?.addEventListener('click', () => $('ttModal').classList.remove('show'));
+  $('ttModal')?.addEventListener('click', e => { if(e.target===$('ttModal')) $('ttModal').classList.remove('show'); });
 
   // 학생 인증사진: 날짜별 표출 + ZIP 다운로드
   async function showStudentPhotos(sid, name) {

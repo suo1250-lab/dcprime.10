@@ -243,6 +243,17 @@
     </div>
   </div>
 
+  <!-- 시간표 보기 모달 -->
+  <div class="modal-overlay" id="ttModal">
+    <div class="modal modal--form" style="max-height:85vh;display:flex;flex-direction:column;padding-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 class="modal-title" id="ttModalTitle" style="margin:0">시간표</h3>
+        <button id="ttModalClose" style="border:none;background:none;font-size:20px;color:#9098a8;cursor:pointer;padding:0 4px">✕</button>
+      </div>
+      <div id="ttModalContent" style="overflow-y:auto;flex:1"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
