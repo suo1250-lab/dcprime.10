@@ -87,7 +87,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="timetable">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        공부 시간표
+        일일 스케쥴
       </button>
       <button class="tab-btn" data-tab="goals">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3 8-8M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -157,7 +157,7 @@
       <div class="tt-summary" id="ttSummary"></div>
 
       <button class="tt-submit" id="ttSubmit">오늘 시간표 제출</button>
-      <p class="tt-hint">시간 칸을 누르면 선택한 과목으로 칠해집니다. 빈칸 = 공부 안 한 시간. (지우개로 비우기)</p>
+      <p class="tt-hint">시간 칸을 누르면 선택한 항목으로 칠해집니다. 빈칸 = 기록 없는 시간. (지우개로 비우기)</p>
     </div>
   </div>
 
@@ -284,10 +284,9 @@
     }, true);
 
     const SUBJECTS = [
-      { key: '국어', color: '#e2574c' },
-      { key: '영어', color: '#3b82f6' },
-      { key: '수학', color: '#10b981' },
-      { key: '과학', color: '#f59e0b' },
+      { key: '스카', color: '#3b82f6' },
+      { key: '식사', color: '#f59e0b' },
+      { key: '학원수업', color: '#10b981' },
       { key: '기타', color: '#8b5cf6' },
       { key: '지우개', color: '#cbd2e0', erase: true },
     ];
@@ -306,11 +305,13 @@
     const submitBtn = document.getElementById('ttSubmit');
     if (!grid) return;
 
-    let sel = '국어';
+    let sel = '스카';
     const today = new Date();           // 학생은 오늘만 편집 가능
     const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const TODAY = ymd(today);
-    const colorOf = k => (SUBJECTS.find(s => s.key === k) || {}).color || '#fff';
+    const baseKey = k => k ? k.split(':')[0] : k;
+    const colorOf = k => (SUBJECTS.find(s => s.key === baseKey(k)) || {}).color || '#fff';
+    const displayOf = k => k ? k.split(':')[0] : '';
 
     // 메모리 상태 (Supabase에서 로드)
     let row = { slots: {}, campus: null, seat: '', submitted: false };
@@ -351,15 +352,22 @@
       grid.innerHTML = SLOTS.map(t => {
         const v = row.slots[t];
         const style = v ? `background:${colorOf(v)}` : '';
+        const label = v ? displayOf(v) : '';
+        const reason = v && v.includes(':') ? v.split(':').slice(1).join(':') : '';
+        const title = reason ? `기타: ${reason}` : '';
         return `<div class="tt-row">
           <div class="tt-time">${t}</div>
-          <div class="tt-cell ${v?'':'empty'}" data-slot="${t}" style="${style}">${v||''}</div>
+          <div class="tt-cell ${v?'':'empty'}" data-slot="${t}" style="${style}" title="${title}">${label}</div>
         </div>`;
       }).join('');
       grid.querySelectorAll('.tt-cell').forEach(c => c.addEventListener('click', () => {
         const slot = c.dataset.slot;
         if (sel === '지우개') delete row.slots[slot];
-        else row.slots[slot] = sel;
+        else if (sel === '기타') {
+          const reason = window.prompt('기타 사유를 입력해주세요 (선택사항)', '');
+          if (reason === null) return;
+          row.slots[slot] = reason.trim() ? `기타:${reason.trim()}` : '기타';
+        } else row.slots[slot] = sel;
         renderGrid(); persist();
       }));
       renderSummary(row.slots);
@@ -369,7 +377,7 @@
       const studied = Object.keys(slots).length;
       const totalH = (studied * 0.5).toFixed(1);
       const bySub = {};
-      Object.values(slots).forEach(s => bySub[s] = (bySub[s]||0) + 0.5);
+      Object.values(slots).forEach(s => { const k = baseKey(s); bySub[k] = (bySub[k]||0) + 0.5; });
       const parts = Object.entries(bySub).map(([k,h]) =>
         `<span class="tt-stat"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colorOf(k)};margin-right:5px"></span>${k} <b>${h}h</b></span>`).join('');
       summaryEl.innerHTML =
