@@ -409,6 +409,10 @@
     renderLegend();
     renderSetup();
     renderGrid();
+
+    // 자정에 페이지 새로고침 → 시간표 초기화
+    const msUntilMidnight = () => { const n = new Date(), m = new Date(n); m.setHours(24,0,0,0); return m-n; };
+    setTimeout(() => location.reload(), msUntilMidnight());
   })();
   </script>
 </body>
