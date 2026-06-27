@@ -308,7 +308,11 @@
   $('refreshStudyBtn')?.addEventListener('click', loadStudy);
 
   // ═══════════════ 상담 ═══════════════
+  const DIFY_REPORT_URL = ''; // Dify 엔드포인트 (나중에 입력)
+  const DIFY_REPORT_KEY = ''; // Dify API 키 (나중에 입력)
+
   let consultSid = null;
+  let currentConsults = [];
   async function loadConsultStudents() {
     await fetchStudents();
     const grid = $('studentSelectGrid');
@@ -330,8 +334,10 @@
   }
   async function renderConsults() {
     const { data } = await sb.from('consults').select('*').eq('student_id', consultSid).order('date', { ascending:false });
+    currentConsults = data || [];
     const list = $('consultList');
-    if (!data || !data.length) { list.innerHTML = '<p class="empty-text">상담 기록이 없습니다.</p>'; return; }
+    $('reportBtn').style.display = currentConsults.length ? 'inline-flex' : 'none';
+    if (!currentConsults.length) { list.innerHTML = '<p class="empty-text">상담 기록이 없습니다.</p>'; return; }
     list.innerHTML = data.map(c => `<div style="border:1px solid #eceef4;border-radius:12px;padding:14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>${esc(c.date||'')}</b><span style="color:#8b92a4;font-size:13px">${esc(c.counselor||'')}</span></div>
       ${c.content?`<p style="margin:4px 0"><b>내용</b> · ${esc(c.content)}</p>`:''}
@@ -350,6 +356,51 @@
     ['cContent','cStrength','cWeakness','cNextGoal','cCounselor'].forEach(id => $(id).value = '');
     $('consultFormError').textContent = '';
   });
+  $('reportBtn')?.addEventListener('click', async () => {
+    const s = studentsCache.find(x => x.id === consultSid);
+    const studentName = s?.name || '';
+    const grade = s?.grade || '';
+    const recordsText = currentConsults.map(c =>
+      `[${c.date}]\n내용: ${c.content||'-'}\n강점: ${c.strength||'-'}\n약점: ${c.weakness||'-'}\n다음목표: ${c.next_goal||'-'}\n상담인: ${c.counselor||'-'}`
+    ).join('\n\n');
+
+    $('reportModalTitle').textContent = `${studentName} 상담 리포트`;
+    $('reportContent').textContent = '리포트 생성 중...';
+    $('reportCopyBtn').style.display = 'none';
+    $('reportModal').classList.add('show');
+
+    if (!DIFY_REPORT_URL) {
+      $('reportContent').textContent = `[${studentName} (${grade}) 상담 기록]\n\n${recordsText}`;
+      $('reportCopyBtn').style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch(DIFY_REPORT_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${DIFY_REPORT_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inputs: { student_name: studentName, grade, consult_records: recordsText },
+          query: '상담기록을 바탕으로 활동 추천 및 방향성 리포트를 작성해주세요.',
+          response_mode: 'blocking',
+          user: 'admin'
+        })
+      });
+      const json = await res.json();
+      $('reportContent').textContent = json.answer || json.outputs?.text || '리포트 생성 실패';
+      $('reportCopyBtn').style.display = 'block';
+    } catch(e) {
+      $('reportContent').textContent = '오류: ' + e.message;
+    }
+  });
+
+  $('reportCopyBtn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText($('reportContent').textContent);
+    $('reportCopyBtn').textContent = '복사 완료 ✓';
+    setTimeout(() => $('reportCopyBtn').textContent = '복사하기', 2000);
+  });
+  $('reportModalClose')?.addEventListener('click', () => $('reportModal').classList.remove('show'));
+  $('reportModal')?.addEventListener('click', e => { if (e.target === $('reportModal')) $('reportModal').classList.remove('show'); });
+
   $('consultCancel')?.addEventListener('click', () => $('consultForm').style.display = 'none');
   $('consultSave')?.addEventListener('click', async () => {
     if (!consultSid) return;

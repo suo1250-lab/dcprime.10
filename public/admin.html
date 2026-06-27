@@ -153,7 +153,10 @@
       <div class="analysis-result-panel" id="consultPanel" style="display:none">
         <div class="analysis-result-header">
           <h3 class="analysis-student-name" id="consultStudentName">—</h3>
-          <button class="btn-primary-sm" id="addConsultBtn">+ 상담내역 추가</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost-sm" id="reportBtn" style="display:none">리포트 발행</button>
+            <button class="btn-primary-sm" id="addConsultBtn">+ 상담내역 추가</button>
+          </div>
         </div>
 
         <!-- 추가 폼 (토글) -->
@@ -240,6 +243,18 @@
         <button class="modal-btn modal-btn--cancel" id="deleteCancel">취소</button>
         <button class="modal-btn modal-btn--confirm" id="deleteConfirm">삭제</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 상담 리포트 모달 -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal modal--form" style="max-height:85vh;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 class="modal-title" style="margin:0" id="reportModalTitle">상담 리포트</h3>
+        <button id="reportModalClose" style="border:none;background:none;font-size:20px;color:#9098a8;cursor:pointer">✕</button>
+      </div>
+      <div id="reportContent" style="overflow-y:auto;flex:1;white-space:pre-wrap;font-size:14px;line-height:1.9;color:#333;background:#f8f9fc;border-radius:10px;padding:14px"></div>
+      <button id="reportCopyBtn" class="btn-primary-sm" style="display:none;margin-top:14px;width:100%;height:44px;font-size:15px;border-radius:10px">복사하기</button>
     </div>
   </div>
 
