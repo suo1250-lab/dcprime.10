@@ -308,8 +308,7 @@
   $('refreshStudyBtn')?.addEventListener('click', loadStudy);
 
   // ═══════════════ 상담 ═══════════════
-  const GEMINI_API_KEY = window.GEMINI_KEY || '';
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const GEMINI_API_URL = '/api/report';
 
   const REPORT_SYSTEM = `당신은 진로 상담 전문가입니다. 학생 맞춤형 진로 리포트를 작성하세요.
 
@@ -464,14 +463,10 @@
     const res = await fetch(GEMINI_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemText }] },
-        contents: [{ role: 'user', parts: [{ text: userText }] }],
-        generationConfig: { temperature: 0.7 }
-      })
+      body: JSON.stringify({ system: systemText, user: userText })
     });
     const json = await res.json();
-    return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return json.text || '';
   }
 
   let consultSid = null;
