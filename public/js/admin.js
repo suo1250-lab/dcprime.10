@@ -309,7 +309,7 @@
 
   // ═══════════════ 상담 ═══════════════
   const GEMINI_API_KEY = 'AIzaSyBFw5TFTTk6sxC1piGjHsbOPQJRSSA2150';
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const REPORT_SYSTEM = `당신은 진로 상담 전문가입니다. 학생 맞춤형 진로 리포트를 작성하세요.
 
