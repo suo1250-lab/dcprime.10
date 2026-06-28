@@ -3,6 +3,13 @@ export default {
     try {
       const url = new URL(request.url);
 
+      if (url.pathname === '/api/debug-key') {
+        const key = env.GEMINI_API_KEY || '';
+        return new Response(JSON.stringify({ keyLength: key.length, keyStart: key.slice(0, 6) }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
       if (url.pathname === '/api/report' && request.method === 'POST') {
         const { system, user } = await request.json();
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
