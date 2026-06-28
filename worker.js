@@ -17,9 +17,15 @@ export default {
       });
 
       const json = await res.json();
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: json }), {
+          status: res.status,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
       return new Response(JSON.stringify({ text }), {
-        status: res.status,
+        status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }

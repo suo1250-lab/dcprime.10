@@ -466,6 +466,7 @@
       body: JSON.stringify({ system: systemText, user: userText })
     });
     const json = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(json.error || json));
     return json.text || '';
   }
 
