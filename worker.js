@@ -4,7 +4,7 @@ export default {
 
     if (url.pathname === '/api/report' && request.method === 'POST') {
       const { system, user } = await request.json();
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
 
       const res = await fetch(apiUrl, {
         method: 'POST',
