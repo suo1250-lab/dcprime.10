@@ -308,8 +308,39 @@
   $('refreshStudyBtn')?.addEventListener('click', loadStudy);
 
   // ═══════════════ 상담 ═══════════════
-  const DIFY_REPORT_URL = ''; // Dify 엔드포인트 (나중에 입력)
-  const DIFY_REPORT_KEY = ''; // Dify API 키 (나중에 입력)
+  const GEMINI_API_KEY = 'AIzaSyBFw5TFTTk6sxC1piGjHsbOPQJRSSA2150';
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const REPORT_SYSTEM = `당신은 진로 상담 전문가입니다. 학생 맞춤형 진로 리포트를 작성하세요.
+
+[작성 원칙]
+- 학생의 상담 내용에 기반하여 심화적이고 실질적인 내용을 제공하세요.
+- 학생의 가능성과 강점을 중심으로 긍정적이고 응원하는 톤으로 작성하세요.
+- 구체적인 활동 추천, 방향성 제시, 동기부여가 되는 내용만 포함하세요.
+
+[절대 금지]
+- "정시/수시를 써라" 등 입시 전략 단정 금지
+- "가망이 없다", "어렵다", "힘들다" 등 부정적 평가 금지
+- 성적이나 현재 수준으로 가능성을 제한하는 표현 금지
+- 특정 대학/학과를 단정적으로 추천하거나 배제하는 표현 금지
+- 학생을 위축시킬 수 있는 모든 표현 금지`;
+
+  const MAJOR_PROMPTS = {
+    '컴퓨터/AI/소프트웨어': `컴퓨터/AI/소프트웨어 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (컴퓨터공학/AI/데이터사이언스/사이버보안 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵`,
+    '기계/로봇/자동차': `기계/로봇/자동차 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (기계공학/로봇공학/자동차공학/항공우주 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (국내 대기업 연계 포함)`,
+    '전기/전자/반도체': `전기/전자/반도체 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (전기공학/전자공학/반도체/디스플레이 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (삼성전자/SK하이닉스 등 반도체 산업 연계)`,
+    '화학/재료/에너지': `화학/재료/에너지 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (화학공학/재료공학/신재생에너지/배터리 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (이차전지/수소에너지 산업 연계)`,
+    '건축/토목/환경': `건축/토목/환경 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (건축학/건축공학/토목/도시공학/환경공학 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (건설사/공기업/설계사무소 등)`,
+    '의학/치의학': `의학/치의학 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 방향 (의예과/치의예과 등)\n3. 고등학교 재학 중 추천 활동 5가지 (의료봉사/생명과학 심화 등)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (전공의 과정 포함)`,
+    '간호/보건': `간호/보건 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (간호학/보건관리/물리치료/임상병리 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (병원/공공보건/해외취업 등)`,
+    '약학/생명과학': `약학/생명과학 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (약학/생명공학/바이오/식품영양 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (제약회사/연구소/약국 등)`,
+    '경영/경제': `경영/경제 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (경영/경제/회계/마케팅/금융 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (대기업/금융권/스타트업/컨설팅 등)`,
+    '법학/행정': `법학/행정 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (법학/행정학/정치외교/공공정책 등)\n3. 고등학교 재학 중 추천 활동 5가지 (모의재판/토론/봉사 등)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (로스쿨/공무원/공기업/NGO 등)`,
+    '교육': `교육 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (사범대/교육학/유아교육/특수교육 등)\n3. 고등학교 재학 중 추천 활동 5가지 (튜터링/교육봉사 등)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (교원임용/교육행정/EdTech 등)`,
+    '사회/심리': `사회/심리 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (심리학/사회학/사회복지/상담심리 등)\n3. 고등학교 재학 중 추천 활동 5가지 (구체적으로)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (임상심리사/사회복지사/HR/UX리서처 등)`,
+    '어문/인문': `어문/인문 전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 추천 세부 전공 (국문/영문/중문/일문/철학/역사 등)\n3. 고등학교 재학 중 추천 활동 5가지 (독서/글쓰기/언어 자격증 등)\n4. 추천 대학 학과 유형 및 진학 방향\n5. 졸업 후 커리어 로드맵 (출판/미디어/번역/외교/공무원 등)`,
+    '자유전공': `자유전공 진로 리포트를 작성하세요:\n1. 학생 현황 요약 (강점/관심사 중심)\n2. 자유전공 선택이 적합한 이유 분석\n3. 고등학교 재학 중 추천 활동 5가지 (다양한 분야 탐색 중심)\n4. 입학 후 전공 탐색 전략 및 추천 전공 방향 2~3가지\n5. 졸업 후 커리어 로드맵`,
+  };
 
   let consultSid = null;
   let currentConsults = [];
@@ -356,40 +387,50 @@
     ['cContent','cStrength','cWeakness','cNextGoal','cCounselor'].forEach(id => $(id).value = '');
     $('consultFormError').textContent = '';
   });
-  $('reportBtn')?.addEventListener('click', async () => {
+  $('reportBtn')?.addEventListener('click', () => {
+    const s = studentsCache.find(x => x.id === consultSid);
+    $('reportModalTitle').textContent = `${s?.name || ''} 상담 리포트`;
+    $('reportMajorWrap').style.display = 'block';
+    $('reportContent').style.display = 'none';
+    $('reportContent').textContent = '';
+    $('reportCopyBtn').style.display = 'none';
+    $('reportModal').classList.add('show');
+  });
+
+  $('reportGenerateBtn')?.addEventListener('click', async () => {
     const s = studentsCache.find(x => x.id === consultSid);
     const studentName = s?.name || '';
     const grade = s?.grade || '';
+    const majorField = $('reportMajorSelect').value;
     const recordsText = currentConsults.map(c =>
       `[${c.date}]\n내용: ${c.content||'-'}\n강점: ${c.strength||'-'}\n약점: ${c.weakness||'-'}\n다음목표: ${c.next_goal||'-'}\n상담인: ${c.counselor||'-'}`
     ).join('\n\n');
 
-    $('reportModalTitle').textContent = `${studentName} 상담 리포트`;
+    $('reportMajorWrap').style.display = 'none';
+    $('reportContent').style.display = 'block';
     $('reportContent').textContent = '리포트 생성 중...';
     $('reportCopyBtn').style.display = 'none';
-    $('reportModal').classList.add('show');
 
-    if (!DIFY_REPORT_URL) {
-      $('reportContent').textContent = `[${studentName} (${grade}) 상담 기록]\n\n${recordsText}`;
-      $('reportCopyBtn').style.display = 'block';
-      return;
-    }
+    const majorPrompt = MAJOR_PROMPTS[majorField] || MAJOR_PROMPTS['자유전공'];
+    const userPrompt = `[학생 정보]\n이름: ${studentName} / 학년: ${grade} / 계열: ${majorField}\n\n[상담 기록]\n${recordsText}\n\n${majorPrompt}`;
+
     try {
-      const res = await fetch(DIFY_REPORT_URL, {
+      const res = await fetch(GEMINI_API_URL, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${DIFY_REPORT_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          inputs: { student_name: studentName, grade, consult_records: recordsText },
-          query: '상담기록을 바탕으로 활동 추천 및 방향성 리포트를 작성해주세요.',
-          response_mode: 'blocking',
-          user: 'admin'
+          system_instruction: { parts: [{ text: REPORT_SYSTEM }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: { temperature: 0.7 }
         })
       });
       const json = await res.json();
-      $('reportContent').textContent = json.answer || json.outputs?.text || '리포트 생성 실패';
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '리포트 생성 실패';
+      $('reportContent').textContent = text;
       $('reportCopyBtn').style.display = 'block';
     } catch(e) {
       $('reportContent').textContent = '오류: ' + e.message;
+      $('reportMajorWrap').style.display = 'block';
     }
   });
 

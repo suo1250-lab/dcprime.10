@@ -253,7 +253,27 @@
         <h3 class="modal-title" style="margin:0" id="reportModalTitle">상담 리포트</h3>
         <button id="reportModalClose" style="border:none;background:none;font-size:20px;color:#9098a8;cursor:pointer">✕</button>
       </div>
-      <div id="reportContent" style="overflow-y:auto;flex:1;white-space:pre-wrap;font-size:14px;line-height:1.9;color:#333;background:#f8f9fc;border-radius:10px;padding:14px"></div>
+      <div id="reportMajorWrap" style="margin-bottom:12px">
+        <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:6px">계열 선택</label>
+        <select id="reportMajorSelect" style="width:100%;padding:10px 12px;border:1px solid #e2e5ee;border-radius:10px;font-size:14px;color:#333;background:#fff">
+          <option value="컴퓨터/AI/소프트웨어">컴퓨터/AI/소프트웨어</option>
+          <option value="기계/로봇/자동차">기계/로봇/자동차</option>
+          <option value="전기/전자/반도체">전기/전자/반도체</option>
+          <option value="화학/재료/에너지">화학/재료/에너지</option>
+          <option value="건축/토목/환경">건축/토목/환경</option>
+          <option value="의학/치의학">의학/치의학</option>
+          <option value="간호/보건">간호/보건</option>
+          <option value="약학/생명과학">약학/생명과학</option>
+          <option value="경영/경제">경영/경제</option>
+          <option value="법학/행정">법학/행정</option>
+          <option value="교육">교육</option>
+          <option value="사회/심리">사회/심리</option>
+          <option value="어문/인문">어문/인문</option>
+          <option value="자유전공">자유전공</option>
+        </select>
+        <button id="reportGenerateBtn" class="btn-primary-sm" style="margin-top:10px;width:100%;height:44px;font-size:15px;border-radius:10px">리포트 생성</button>
+      </div>
+      <div id="reportContent" style="overflow-y:auto;flex:1;white-space:pre-wrap;font-size:14px;line-height:1.9;color:#333;background:#f8f9fc;border-radius:10px;padding:14px;display:none"></div>
       <button id="reportCopyBtn" class="btn-primary-sm" style="display:none;margin-top:14px;width:100%;height:44px;font-size:15px;border-radius:10px">복사하기</button>
     </div>
   </div>
