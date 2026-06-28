@@ -468,6 +468,31 @@
 5. 졸업 후 커리어 로드맵`,
   };
 
+  // 리포트 캐시 헬퍼 (localStorage, 최대 30개 LRU)
+  const RC_PREFIX = 'dcr_';
+  const RC_MAX = 30;
+  function _rcHash(s) {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = (h * 33 ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+  function getReportCache(sid, major) {
+    try { const r = localStorage.getItem(RC_PREFIX + sid + '_' + major); return r ? JSON.parse(r) : null; }
+    catch { return null; }
+  }
+  function setReportCache(sid, major, text, hash) {
+    try {
+      localStorage.setItem(RC_PREFIX + sid + '_' + major, JSON.stringify({ text, hash, at: Date.now() }));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(RC_PREFIX));
+      if (keys.length > RC_MAX) {
+        keys.map(k => { try { return { k, at: JSON.parse(localStorage.getItem(k))?.at || 0 }; } catch { return { k, at: 0 }; } })
+            .sort((a, b) => a.at - b.at)
+            .slice(0, keys.length - RC_MAX)
+            .forEach(e => localStorage.removeItem(e.k));
+      }
+    } catch {}
+  }
+
   async function callGemini(systemText, userText) {
     const key = await getGeminiKey();
     if (!key) throw new Error('API 키를 불러올 수 없습니다.');
@@ -541,38 +566,79 @@
     $('reportModal').classList.add('show');
   });
 
-  $('reportGenerateBtn')?.addEventListener('click', async () => {
-    const s = studentsCache.find(x => x.id === consultSid);
-    const studentName = s?.name || '';
-    const grade = s?.grade || '';
-    const majorField = $('reportMajorSelect').value;
-    const category = CATEGORY_MAP[majorField] || '자유전공';
-    const recordsText = currentConsults.map(c =>
+  function _buildRecordsText() {
+    return currentConsults.map(c =>
       `[${c.date}]\n내용: ${c.content||'-'}\n강점: ${c.strength||'-'}\n약점: ${c.weakness||'-'}\n다음목표: ${c.next_goal||'-'}\n상담인: ${c.counselor||'-'}`
     ).join('\n\n');
+  }
+
+  function _showCachedReport(text, notice) {
+    $('reportMajorWrap').style.display = 'none';
+    $('reportContent').style.display = 'block';
+    $('reportContent').textContent = text;
+    $('reportCacheNotice').style.display = 'block';
+    $('reportCacheNotice').textContent = notice;
+    $('reportCopyBtn').style.display = 'block';
+    $('reportRegenBtn').style.display = 'block';
+  }
+
+  async function _generateReport(sid, studentName, grade, majorField, recordsText, forceRegen) {
+    const category = CATEGORY_MAP[majorField] || '자유전공';
+    const hash = _rcHash(recordsText);
+
+    if (!forceRegen) {
+      const cached = getReportCache(sid, majorField);
+      if (cached) {
+        if (cached.hash === hash) {
+          _showCachedReport(cached.text, '저장된 리포트');
+          return;
+        }
+        if (!confirm('상담 내용이 변경됐습니다. 재발행하시겠습니까?\n(아니오: 이전 리포트 보기)')) {
+          _showCachedReport(cached.text, '이전 리포트 (내용 변경됨)');
+          return;
+        }
+      }
+    }
 
     $('reportMajorWrap').style.display = 'none';
     $('reportContent').style.display = 'block';
+    $('reportContent').textContent = '';
+    $('reportCacheNotice').style.display = 'none';
     $('reportCopyBtn').style.display = 'none';
+    $('reportRegenBtn').style.display = 'none';
 
     try {
-      // 1단계: 카테고리별 리서치
       $('reportContent').textContent = '1/2 계열 정보 분석 중...';
       const researchPrompt = `[학생 정보]\n이름: ${studentName} / 학년: ${grade}\n\n[상담 기록]\n${recordsText}\n\n위 학생의 상담 기록을 바탕으로 ${category} 계열 진로 관련 정보를 정리해주세요.`;
       const researchResult = await callGemini(CATEGORY_RESEARCH[category], researchPrompt);
 
-      // 2단계: 세부 전공 리포트 생성
       $('reportContent').textContent = '2/2 진로 리포트 작성 중...';
       const majorPrompt = MAJOR_PROMPTS[majorField] || MAJOR_PROMPTS['자유전공'];
       const reportPrompt = `[참고 자료 — ${category} 계열 동향]\n${researchResult}\n\n[학생 정보]\n이름: ${studentName} / 학년: ${grade} / 희망 계열: ${majorField}\n\n[상담 기록]\n${recordsText}\n\n${majorPrompt}`;
       const reportResult = await callGemini(REPORT_SYSTEM, reportPrompt);
 
-      $('reportContent').textContent = reportResult || '리포트 생성 실패';
+      const text = reportResult || '리포트 생성 실패';
+      setReportCache(sid, majorField, text, hash);
+      $('reportContent').textContent = text;
+      $('reportCacheNotice').style.display = 'none';
       $('reportCopyBtn').style.display = 'block';
+      $('reportRegenBtn').style.display = 'block';
     } catch(e) {
       $('reportContent').textContent = '오류: ' + e.message;
       $('reportMajorWrap').style.display = 'block';
     }
+  }
+
+  $('reportGenerateBtn')?.addEventListener('click', async () => {
+    const s = studentsCache.find(x => x.id === consultSid);
+    const majorField = $('reportMajorSelect').value;
+    await _generateReport(consultSid, s?.name || '', s?.grade || '', majorField, _buildRecordsText(), false);
+  });
+
+  $('reportRegenBtn')?.addEventListener('click', async () => {
+    const s = studentsCache.find(x => x.id === consultSid);
+    const majorField = $('reportMajorSelect').value;
+    await _generateReport(consultSid, s?.name || '', s?.grade || '', majorField, _buildRecordsText(), true);
   });
 
   $('reportCopyBtn')?.addEventListener('click', () => {
@@ -580,8 +646,13 @@
     $('reportCopyBtn').textContent = '복사 완료 ✓';
     setTimeout(() => $('reportCopyBtn').textContent = '복사하기', 2000);
   });
-  $('reportModalClose')?.addEventListener('click', () => $('reportModal').classList.remove('show'));
-  $('reportModal')?.addEventListener('click', e => { if (e.target === $('reportModal')) $('reportModal').classList.remove('show'); });
+  function _closeReportModal() {
+    $('reportModal').classList.remove('show');
+    $('reportCacheNotice').style.display = 'none';
+    $('reportRegenBtn').style.display = 'none';
+  }
+  $('reportModalClose')?.addEventListener('click', _closeReportModal);
+  $('reportModal')?.addEventListener('click', e => { if (e.target === $('reportModal')) _closeReportModal(); });
 
   $('consultCancel')?.addEventListener('click', () => $('consultForm').style.display = 'none');
   $('consultSave')?.addEventListener('click', async () => {
