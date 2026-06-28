@@ -12,39 +12,17 @@ export default {
     try {
       const url = new URL(request.url);
 
-      if (url.pathname === '/api/debug-key') {
-        const key = resolveKey(env);
-        const bindings = Object.keys(env);
-        return new Response(JSON.stringify({ keyLength: key.length, keyStart: key.slice(0, 6), bindings }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      if (url.pathname === '/api/report' && request.method === 'POST') {
-        const { system, user } = await request.json();
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${resolveKey(env)}`;
-
-        const res = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: user }] }],
-            generationConfig: { temperature: 0.7 }
-          })
-        });
-
-        const json = await res.json();
-        if (!res.ok) {
-          return new Response(JSON.stringify({ error: json }), {
-            status: res.status,
-            headers: { 'Content-Type': 'application/json' }
+      // 키 전달 (동일 출처에서만). 브라우저가 한국 IP로 Gemini를 직접 호출하기 위함.
+      // 워커 IP는 Gemini 미지원 지역으로 잡혀 서버사이드 프록시가 막힘.
+      if (url.pathname === '/api/key') {
+        const origin = request.headers.get('Origin') || request.headers.get('Referer') || '';
+        if (!origin.includes(url.host)) {
+          return new Response(JSON.stringify({ error: 'forbidden' }), {
+            status: 403, headers: { 'Content-Type': 'application/json' }
           });
         }
-        const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        return new Response(JSON.stringify({ text }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ key: resolveKey(env) }), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
         });
       }
 

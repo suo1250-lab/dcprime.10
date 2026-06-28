@@ -308,7 +308,16 @@
   $('refreshStudyBtn')?.addEventListener('click', loadStudy);
 
   // ═══════════════ 상담 ═══════════════
-  const GEMINI_API_URL = '/api/report';
+  // 키는 워커에서 받아오고(깃엔 없음), Gemini 호출은 브라우저(한국 IP)에서 직접 한다.
+  // 워커 egress IP가 Gemini 미지원 지역으로 잡혀 서버사이드 프록시가 막히기 때문.
+  let _geminiKey = null;
+  async function getGeminiKey() {
+    if (_geminiKey) return _geminiKey;
+    const res = await fetch('/api/key');
+    const json = await res.json();
+    _geminiKey = (json.key || '').trim();
+    return _geminiKey;
+  }
 
   const REPORT_SYSTEM = `당신은 진로 상담 전문가입니다. 학생 맞춤형 진로 리포트를 작성하세요.
 
@@ -460,14 +469,21 @@
   };
 
   async function callGemini(systemText, userText) {
-    const res = await fetch(GEMINI_API_URL, {
+    const key = await getGeminiKey();
+    if (!key) throw new Error('API 키를 불러올 수 없습니다.');
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: systemText, user: userText })
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemText }] },
+        contents: [{ role: 'user', parts: [{ text: userText }] }],
+        generationConfig: { temperature: 0.7 }
+      })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(JSON.stringify(json.error || json));
-    return json.text || '';
+    return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
   let consultSid = null;
