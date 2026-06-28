@@ -5,7 +5,8 @@ export default {
 
       if (url.pathname === '/api/debug-key') {
         const key = env.GEMINI_API_KEY || '';
-        return new Response(JSON.stringify({ keyLength: key.length, keyStart: key.slice(0, 6) }), {
+        const bindings = Object.keys(env);
+        return new Response(JSON.stringify({ keyLength: key.length, keyStart: key.slice(0, 6), bindings }), {
           headers: { 'Content-Type': 'application/json' }
         });
       }
