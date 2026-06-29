@@ -1,14 +1,15 @@
 (() => {
   // ── 탭 전환 ─────────────────────────────────────────────
   const tabBtns  = document.querySelectorAll('.tab-btn');
-  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy'), timetable: document.getElementById('tabTimetable'), goals: document.getElementById('tabGoals') };
+  const tabPanels = { chat: document.getElementById('tabChat'), study: document.getElementById('tabStudy'), timetable: document.getElementById('tabTimetable'), goals: document.getElementById('tabGoals'), reports: document.getElementById('tabReports') };
 
   tabBtns.forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.tab;
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    Object.entries(tabPanels).forEach(([k, p]) => p.classList.toggle('active', k === t));
+    Object.entries(tabPanels).forEach(([k, p]) => p && p.classList.toggle('active', k === t));
     if (t === 'study') loadStudyLogs();
     if (t === 'goals') loadGoals();
+    if (t === 'reports') loadReports();
   }));
 
   // ══════════════════════════════════════════════
@@ -323,6 +324,56 @@
         loadStudyLogs();
       }));
     } catch (e) { console.error('학습기록 로드 오류', e); }
+  };
+
+  // ══════════════════════════════════════════════
+  // 상담 리포트 탭
+  // ══════════════════════════════════════════════
+  const loadReports = async () => {
+    const me = window.session.get();
+    const list = document.getElementById('rpList');
+    if (!list) return;
+    list.innerHTML = '<p class="empty-text" style="text-align:center;padding-top:40px;color:#aab0bf">불러오는 중...</p>';
+    try {
+      const { data, error } = await window.sb.from('reports')
+        .select('id,major,content,created_at')
+        .eq('student_id', me.sid)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data || !data.length) {
+        list.innerHTML = '<p class="empty-text" style="text-align:center;padding-top:40px;color:#aab0bf">아직 발행된 리포트가 없어요.</p>';
+        return;
+      }
+      // 날짜별 그룹핑
+      const groups = {};
+      data.forEach(r => {
+        const d = r.created_at.slice(0, 10);
+        (groups[d] = groups[d] || []).push(r);
+      });
+      list.innerHTML = Object.entries(groups).map(([date, reports]) => `
+        <div class="rp-date-group">
+          <div class="rp-date-label">${date}</div>
+          ${reports.map(r => {
+            const t = r.created_at.slice(11, 16);
+            return `<div class="rp-card">
+              <div class="rp-card-header">
+                <span class="rp-major-badge">${escHtml(r.major)}</span>
+                <span class="rp-time">${t}</span>
+              </div>
+              <div class="rp-content" id="rpc-${r.id}">${escHtml(r.content)}</div>
+              <button class="rp-expand-btn" data-id="${r.id}">더 보기</button>
+            </div>`;
+          }).join('')}
+        </div>`).join('');
+      list.querySelectorAll('.rp-expand-btn').forEach(btn => {
+        const content = document.getElementById('rpc-' + btn.dataset.id);
+        if (content && content.scrollHeight <= content.clientHeight + 4) btn.style.display = 'none';
+        btn.addEventListener('click', () => {
+          const expanded = content.classList.toggle('expanded');
+          btn.textContent = expanded ? '접기' : '더 보기';
+        });
+      });
+    } catch (e) { list.innerHTML = `<p class="empty-text" style="text-align:center;padding-top:40px;color:#e2574c">오류: ${e.message}</p>`; }
   };
 
   // 초기화: 인증/헤더/로그아웃은 Supabase 세션(chat.html 인라인 스크립트)에서 처리.

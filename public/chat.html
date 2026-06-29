@@ -59,6 +59,17 @@
     .gl-text { flex: 1; font-size: 15px; color: #1f2430; }
     .gl-text.done { text-decoration: line-through; color: #aab0bf; }
     .gl-del { border: none; background: none; color: #e2574c; font-weight: 600; cursor: pointer; font-size: 13px; }
+    .rp-wrap { max-width: 560px; margin: 0 auto; padding: 18px 14px 40px; }
+    .rp-date-group { margin-bottom: 24px; }
+    .rp-date-label { font-size: 12px; font-weight: 700; color: #9098a8; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 10px; padding-left: 2px; }
+    .rp-card { background: #fff; border: 1px solid #eceef4; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+    .rp-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .rp-major-badge { display: inline-block; background: #eff6ff; color: #3b82f6; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+    .rp-time { font-size: 12px; color: #aab0bf; margin-left: auto; }
+    .rp-content { font-size: 13.5px; line-height: 1.85; color: #333; white-space: pre-wrap; max-height: 220px; overflow: hidden; position: relative; transition: max-height .3s; }
+    .rp-content.expanded { max-height: none; }
+    .rp-content:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 48px; background: linear-gradient(transparent, #fff); pointer-events: none; }
+    .rp-expand-btn { margin-top: 8px; background: none; border: none; color: #3b82f6; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
   </style>
 </head>
 <body class="chat-body">
@@ -96,6 +107,10 @@
       <button class="tab-btn" data-tab="study">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         오늘 학습 인증
+      </button>
+      <button class="tab-btn" data-tab="reports">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        상담 리포트
       </button>
     </div>
   </header>
@@ -249,6 +264,13 @@
         <div id="todayLogsList"><p class="empty-text">아직 학습 인증 기록이 없어요.</p></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ═══════════════ 상담 리포트 탭 ═══════════════ -->
+  <div class="tab-panel" id="tabReports">
+    <div class="rp-wrap">
+      <div id="rpList"><p class="empty-text" style="text-align:center;padding-top:40px;color:#aab0bf">리포트를 불러오는 중...</p></div>
     </div>
   </div>
 

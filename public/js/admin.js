@@ -619,6 +619,7 @@
 
       const text = reportResult || '리포트 생성 실패';
       setReportCache(sid, majorField, text, hash);
+      sb.from('reports').insert({ student_id: sid, major: majorField, content: text, records_hash: hash });
       $('reportContent').textContent = text;
       $('reportCacheNotice').style.display = 'none';
       $('reportCopyBtn').style.display = 'block';
