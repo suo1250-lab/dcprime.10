@@ -335,10 +335,12 @@
     if (!list) return;
     list.innerHTML = '<p class="empty-text" style="text-align:center;padding-top:40px;color:#aab0bf">불러오는 중...</p>';
     try {
+      console.log('[reports] me.sid:', me.sid);
       const { data, error } = await window.sb.from('reports')
         .select('id,major,content,created_at')
         .eq('student_id', me.sid)
         .order('created_at', { ascending: false });
+      console.log('[reports] data:', data, 'error:', error);
       if (error) throw error;
       if (!data || !data.length) {
         list.innerHTML = '<p class="empty-text" style="text-align:center;padding-top:40px;color:#aab0bf">아직 발행된 리포트가 없어요.</p>';
