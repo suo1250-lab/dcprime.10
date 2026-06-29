@@ -190,12 +190,10 @@
     await fetchStudents();
     const campus = $('studyCampusFilter').value;
     const today = todayStr();
-    const d21 = new Date(); d21.setDate(d21.getDate() - 20);
-    const from21 = `${d21.getFullYear()}-${String(d21.getMonth()+1).padStart(2,'0')}-${String(d21.getDate()).padStart(2,'0')}`;
     const [ttRes, glRes, glTotalRes] = await Promise.all([
       sb.from('timetables').select('student_id,slots,campus,seat,submitted').eq('date', today),
       sb.from('goals').select('student_id,done').eq('date', today),
-      sb.from('goals').select('student_id,done').gte('date', from21).lte('date', today),
+      sb.from('goals').select('student_id,done').lte('date', today),
     ]);
     const ttMap = new Map((ttRes.data||[]).map(t => [t.student_id, t]));
     const goalAgg = {};
@@ -241,7 +239,7 @@
         <div style="margin-top:8px;display:flex;gap:12px;font-size:13px;font-weight:700">
           <span>당일 <span style="color:${rateColor(rate)}">${rate==null?'—':rate+'% ('+g.done+'/'+g.total+')'}</span></span>
           <span style="color:#e2e5ee">|</span>
-          <span>3주 누적 <span style="color:${rateColor(totalRate)}">${totalRate==null?'—':totalRate+'% ('+gt.done+'/'+gt.total+')'}</span></span>
+          <span>전체 누적 <span style="color:${rateColor(totalRate)}">${totalRate==null?'—':totalRate+'% ('+gt.done+'/'+gt.total+')'}</span></span>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
