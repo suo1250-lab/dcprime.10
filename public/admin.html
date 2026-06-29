@@ -124,6 +124,18 @@
         </div>
       </div>
 
+      <!-- 전체 이행률 요약 -->
+      <div id="goalSummaryBar" style="background:#fff;border:1px solid #eceef4;border-radius:14px;padding:14px 18px;margin-bottom:14px;display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:700;color:#444">전체 목표 이행률</span>
+          <span style="font-size:20px;font-weight:800;color:#3b82f6" id="goalSummaryRate">—</span>
+        </div>
+        <div style="height:8px;background:#eef0f5;border-radius:999px;overflow:hidden">
+          <div id="goalSummaryBarFill" style="height:100%;width:0;background:#3b82f6;border-radius:999px;transition:width .3s"></div>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#9098a8" id="goalSummaryDetail"></div>
+      </div>
+
       <!-- 학생별 요약 카드 -->
       <div class="student-summary-cards" id="studySummaryCards"></div>
 

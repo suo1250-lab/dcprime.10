@@ -199,6 +199,22 @@
     (glRes.data||[]).forEach(g => { const a = goalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
     const list = studentsCache.filter(s => !campus || s.campus === campus);
 
+    // 전체 이행률 요약
+    const totDone = list.reduce((s, x) => s + (goalAgg[x.id]?.done || 0), 0);
+    const totTotal = list.reduce((s, x) => s + (goalAgg[x.id]?.total || 0), 0);
+    if (totTotal > 0) {
+      const totRate = Math.round(totDone / totTotal * 100);
+      const barColor = totRate >= 80 ? '#10b981' : totRate >= 50 ? '#f59e0b' : '#e2574c';
+      $('goalSummaryBar').style.display = 'block';
+      $('goalSummaryRate').textContent = totRate + '%';
+      $('goalSummaryRate').style.color = barColor;
+      $('goalSummaryBarFill').style.width = totRate + '%';
+      $('goalSummaryBarFill').style.background = barColor;
+      $('goalSummaryDetail').textContent = `${totDone}개 완료 / 전체 ${totTotal}개 · 목표 입력 학생 ${list.filter(x => goalAgg[x.id]?.total).length}명`;
+    } else {
+      $('goalSummaryBar').style.display = 'none';
+    }
+
     $('studySummaryCards').innerHTML = list.map(s => {
       const tt = ttMap.get(s.id);
       const slots = tt?.slots || {};
