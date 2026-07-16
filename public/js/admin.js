@@ -10,7 +10,10 @@
   const todayStr = () => fmt(new Date());
 
   // 헤더 / 로그아웃
-  $('adminName').textContent = `${me.sname} 원장`;
+  const pageRole = document.body.dataset.role || '원장';
+  const badge = document.getElementById('adminBadge');
+  if (badge) badge.textContent = pageRole;
+  $('adminName').textContent = `${me.sname} ${pageRole}`;
   $('logoutBtn')?.addEventListener('click', () => { window.session.clear(); window.location.href = '/'; });
 
   // 공통: 학생 목록 캐시
