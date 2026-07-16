@@ -11,10 +11,11 @@
     set(u) { sessionStorage.setItem('dcp_user', JSON.stringify(u)); },
     get() { try { return JSON.parse(sessionStorage.getItem('dcp_user')); } catch { return null; } },
     clear() { sessionStorage.removeItem('dcp_user'); },
-    // 페이지 가드: 필요한 role이 아니면 로그인으로 보냄
-    require(role) {
+    // 페이지 가드: 허용 role 배열 또는 단일 문자열, 없으면 로그인으로
+    require(roles) {
       const u = this.get();
-      if (!u || (role && u.role !== role)) { window.location.href = '/'; return null; }
+      const allowed = roles ? (Array.isArray(roles) ? roles : [roles]) : null;
+      if (!u || (allowed && !allowed.includes(u.role))) { window.location.href = '/'; return null; }
       return u;
     },
   };

@@ -1,6 +1,6 @@
 // 원장 관리자 — Supabase 서버리스
 (async () => {
-  const me = window.session.require('admin');
+  const me = window.session.require(['admin', '부원장', '튜터']);
   if (!me) return;
   const sb = window.sb;
 

@@ -37,6 +37,13 @@
         if (u.role === 'admin') {
           loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 원장님, 안녕하세요!</span>`;
           setTimeout(() => { window.location.href = '/admin.html'; }, 900);
+        } else if (u.role === '부원장') {
+          loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 부원장님, 안녕하세요!</span>`;
+          setTimeout(() => { window.location.href = '/adminpjw.html'; }, 900);
+        } else if (u.role === '튜터') {
+          loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 튜터님, 안녕하세요!</span>`;
+          const slug = (u.sid || '').replace('admin-', '');
+          setTimeout(() => { window.location.href = `/admin${slug}.html`; }, 900);
         } else {
           loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname}님, 환영해요!</span>`;
           setTimeout(() => { window.location.href = '/chat.html'; }, 800);
