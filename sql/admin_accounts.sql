@@ -8,10 +8,10 @@ ALTER TABLE admin ADD COLUMN IF NOT EXISTS role text DEFAULT '원장';
 UPDATE admin SET role = '원장' WHERE name = '신성호';
 
 -- ③ 부원장 + 튜터 계정 INSERT
-INSERT INTO admin (name, pin_hash, role) VALUES
-  ('박주원', extensions.crypt('8962', extensions.gen_salt('bf')), '부원장'),
-  ('김성준', extensions.crypt('8382', extensions.gen_salt('bf')), '튜터'),
-  ('이송빈', extensions.crypt('3115', extensions.gen_salt('bf')), '튜터'),
-  ('김익찬', extensions.crypt('5301', extensions.gen_salt('bf')), '튜터'),
-  ('서준서', extensions.crypt('9130', extensions.gen_salt('bf')), '튜터');
--- 김영재 이따 추가 예정
+INSERT INTO admin (id, name, pin_hash, role) VALUES
+  ('admin-pjw', '박주원', extensions.crypt('8962', extensions.gen_salt('bf')), '부원장'),
+  ('admin-ksj', '김성준', extensions.crypt('8382', extensions.gen_salt('bf')), '튜터'),
+  ('admin-lsb', '이송빈', extensions.crypt('3115', extensions.gen_salt('bf')), '튜터'),
+  ('admin-kic', '김익찬', extensions.crypt('5301', extensions.gen_salt('bf')), '튜터'),
+  ('admin-sjs', '서준서', extensions.crypt('9130', extensions.gen_salt('bf')), '튜터');
+-- 김영재(admin-kyj) 이따 추가 예정
