@@ -33,7 +33,7 @@
   tabBtns.forEach(b => b.addEventListener('click', () => {
     const t = b.dataset.tab;
     tabBtns.forEach(x => x.classList.toggle('active', x.dataset.tab === t));
-    Object.entries(panels).forEach(([k, p]) => p.classList.toggle('active', k === t));
+    Object.entries(panels).forEach(([k, p]) => p?.classList.toggle('active', k === t));
     if (t === 'attendance') loadAttendance();
     if (t === 'study')      loadStudy();
     if (t === 'analysis')   loadConsultStudents();
