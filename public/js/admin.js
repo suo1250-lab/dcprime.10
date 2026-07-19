@@ -582,6 +582,10 @@
     $('consultForm').style.display = 'block';
     $('cDate').value = todayStr();
     ['cContent','cStrength','cWeakness','cNextGoal','cCounselor'].forEach(id => $(id).value = '');
+    if (pageRole === '튜터') {
+      $('cCounselor').value = me.sname;
+      $('cCounselor').readOnly = true;
+    }
     $('consultFormError').textContent = '';
   });
   $('reportBtn')?.addEventListener('click', () => {
