@@ -41,33 +41,6 @@ export default {
     try {
       const url = new URL(request.url);
 
-      // 임시 진단용 (시크릿 존재 여부만 확인, 값은 절대 노출 안 함)
-      if (url.pathname === '/api/debug-env') {
-        return new Response(JSON.stringify({
-          hasServiceKey: !!env.SUPABASE_SERVICE_KEY,
-          hasSuperPin: !!env.SUPER_PIN,
-          serviceKeyLen: (env.SUPABASE_SERVICE_KEY || '').length,
-          serviceKeyHead: (env.SUPABASE_SERVICE_KEY || '').slice(0, 10),
-          serviceKeyTail: (env.SUPABASE_SERVICE_KEY || '').slice(-10),
-        }), { headers: { 'Content-Type': 'application/json' } });
-      }
-
-      // 임시 진단용: Supabase insert 실제 응답 확인
-      if (url.pathname === '/api/debug-insert') {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/login_logs`, {
-          method: 'POST',
-          headers: {
-            apikey: env.SUPABASE_SERVICE_KEY,
-            Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=representation',
-          },
-          body: JSON.stringify({ sid: 'worker-diag', sname: '워커진단', role: '테스트', ip: 'x', ua: 'x' }),
-        });
-        const text = await res.text();
-        return new Response(JSON.stringify({ status: res.status, body: text }), { headers: { 'Content-Type': 'application/json' } });
-      }
-
       // 키 전달 (동일 출처에서만). 브라우저가 한국 IP로 Gemini를 직접 호출하기 위함.
       // 워커 IP는 Gemini 미지원 지역으로 잡혀 서버사이드 프록시가 막힘.
       if (url.pathname === '/api/key') {
