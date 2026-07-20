@@ -41,6 +41,14 @@ export default {
     try {
       const url = new URL(request.url);
 
+      // 임시 진단용 (시크릿 존재 여부만 확인, 값은 절대 노출 안 함)
+      if (url.pathname === '/api/debug-env') {
+        return new Response(JSON.stringify({
+          hasServiceKey: !!env.SUPABASE_SERVICE_KEY,
+          hasSuperPin: !!env.SUPER_PIN,
+        }), { headers: { 'Content-Type': 'application/json' } });
+      }
+
       // 키 전달 (동일 출처에서만). 브라우저가 한국 IP로 Gemini를 직접 호출하기 위함.
       // 워커 IP는 Gemini 미지원 지역으로 잡혀 서버사이드 프록시가 막힘.
       if (url.pathname === '/api/key') {
