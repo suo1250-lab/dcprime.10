@@ -26,7 +26,7 @@ async function insertLoginLog(env, payload) {
 }
 
 async function fetchLoginLogs(env) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/login_logs?select=*&order=created_at.desc&limit=300`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/login_logs?select=*&order=created_at.desc&limit=1000`, {
     headers: {
       apikey: env.SUPABASE_SERVICE_KEY,
       Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
@@ -55,7 +55,7 @@ export default {
         });
       }
 
-      // 관리자 로그인 기록 (원장/부원장/튜터 전용, same-origin만 허용)
+      // 로그인 기록 (전체 계정: 원장/부원장/튜터/학생, same-origin만 허용)
       if (url.pathname === '/api/log-login' && request.method === 'POST') {
         const origin = request.headers.get('Origin') || request.headers.get('Referer') || '';
         if (!origin.includes(url.host)) {

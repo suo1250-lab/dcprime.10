@@ -24,6 +24,12 @@
   h1 { font-size:16px; margin:0 0 20px; color:#8b92a4; font-weight:700; }
   .empty { color:#8b92a4; text-align:center; padding:40px; }
   .table-wrap { overflow-x:auto; border:1px solid #23262f; border-radius:12px; }
+  .tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .tab-btn { padding:9px 18px; border-radius:999px; border:1px solid #2a2e38; background:#1a1d24; color:#8b92a4; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .tab-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+  .role-학생 { background:#f59e0b20; color:#f59e0b; }
+  tr.suspect { background:#e2574c14; }
+  .warn-badge { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; background:#e2574c; color:#fff; }
 </style>
 </head>
 <body>
@@ -36,7 +42,11 @@
 </div>
 
 <div class="wrap" id="content" style="display:none">
-  <h1>관리자 로그인 기록 (최근 300건)</h1>
+  <h1 id="listTitle">로그인 기록 (최근 1000건)</h1>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabAdmin" data-tab="admin">관리자</button>
+    <button class="tab-btn" id="tabStudent" data-tab="student">학생</button>
+  </div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>시간</th><th>이름</th><th>역할</th><th>IP</th><th>기기</th></tr></thead>
@@ -78,6 +88,39 @@
     return browser ? `${os} · ${browser}` : os;
   };
 
+  let allLogs = [];
+  let studentIPs = new Set();
+  let activeTab = 'admin';
+
+  function render() {
+    const rows = allLogs.filter(l => activeTab === 'student' ? l.role === '학생' : l.role !== '학생');
+    if (!rows.length) {
+      logBody.innerHTML = '';
+      document.getElementById('emptyMsg')?.remove();
+      const p = document.createElement('p');
+      p.className = 'empty'; p.id = 'emptyMsg'; p.textContent = '기록이 없습니다.';
+      content.appendChild(p);
+      return;
+    }
+    document.getElementById('emptyMsg')?.remove();
+    logBody.innerHTML = rows.map(l => {
+      const suspect = activeTab === 'admin' && l.ip && studentIPs.has(l.ip);
+      return `<tr class="${suspect ? 'suspect' : ''}">
+        <td>${esc(new Date(l.created_at).toLocaleString('ko-KR'))}</td>
+        <td>${esc(l.sname)}</td>
+        <td><span class="role-badge role-${esc(l.role)}">${esc(l.role)}</span>${suspect ? '<span class="warn-badge">⚠ 학생 IP 일치</span>' : ''}</td>
+        <td>${esc(l.ip)}${l.loc ? ` (${esc(l.loc)})` : ''}</td>
+        <td>${esc(fmtUA(l.ua))}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.toggle('active', x === b));
+    activeTab = b.dataset.tab;
+    render();
+  }));
+
   async function submit() {
     const pin = pinInput.value.trim();
     if (!pin) return;
@@ -92,18 +135,9 @@
       const { logs } = await res.json();
       gate.style.display = 'none';
       content.style.display = 'block';
-      if (!logs || !logs.length) {
-        logBody.innerHTML = '';
-        content.innerHTML += '<p class="empty">기록이 없습니다.</p>';
-        return;
-      }
-      logBody.innerHTML = logs.map(l => `<tr>
-        <td>${esc(new Date(l.created_at).toLocaleString('ko-KR'))}</td>
-        <td>${esc(l.sname)}</td>
-        <td><span class="role-badge role-${esc(l.role)}">${esc(l.role)}</span></td>
-        <td>${esc(l.ip)}${l.loc ? ` (${esc(l.loc)})` : ''}</td>
-        <td>${esc(fmtUA(l.ua))}</td>
-      </tr>`).join('');
+      allLogs = logs || [];
+      studentIPs = new Set(allLogs.filter(l => l.role === '학생' && l.ip).map(l => l.ip));
+      render();
     } catch {
       pinErr.textContent = '네트워크 오류';
     }

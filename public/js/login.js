@@ -37,14 +37,12 @@
         const isPjw   = u.role === '부원장' || u.sid === 'admin-pjw';
         const isTutor = u.role === '튜터'   || (!isPjw && u.sid !== 'admin-001' && (u.sid || '').startsWith('admin-'));
         const isAdminTable = isPjw || isTutor || u.role === 'admin' || u.sid === 'admin-001';
-        if (isAdminTable) {
-          const logRole = isPjw ? '부원장' : isTutor ? '튜터' : '원장';
-          fetch('/api/log-login', {
-            method: 'POST', keepalive: true,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sid: u.sid, sname: u.sname, role: logRole }),
-          }).catch(() => {});
-        }
+        const logRole = isAdminTable ? (isPjw ? '부원장' : isTutor ? '튜터' : '원장') : '학생';
+        fetch('/api/log-login', {
+          method: 'POST', keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sid: u.sid, sname: u.sname, role: logRole }),
+        }).catch(() => {});
         if (isPjw) {
           loading.innerHTML = `<span style="font-size:17px;font-weight:700;color:#191F28">${u.sname} 부원장님, 안녕하세요!</span>`;
           setTimeout(() => { window.location.href = '/adminpjw.html'; }, 900);
