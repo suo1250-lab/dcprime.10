@@ -332,6 +332,8 @@
   // ══════════════════════════════════════════════
   const lvTodayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   let lvType = '지각';
+  const lvDateInput = document.getElementById('lvDateInput');
+  const lvSelectedDate = () => (lvDateInput && lvDateInput.value) || lvTodayStr();
 
   document.querySelectorAll('.lv-type-btn').forEach(b => b.addEventListener('click', () => {
     lvType = b.dataset.type;
@@ -340,22 +342,22 @@
     document.getElementById('lvAbsentForm').style.display = lvType === '결석' ? 'block' : 'none';
   }));
 
+  lvDateInput?.addEventListener('change', loadLeave);
+
   async function loadLeave() {
     const me = window.session.get();
-    const today = lvTodayStr();
-    const d = new Date();
-    const dateEl = document.getElementById('lvDate');
-    if (dateEl) dateEl.textContent = `${today} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+    if (lvDateInput && !lvDateInput.value) lvDateInput.value = lvTodayStr();
+    const date = lvSelectedDate();
 
     const { data } = await window.sb.from('leave_requests').select('*')
-      .eq('student_id', me.sid).eq('date', today).order('created_at', { ascending: false }).limit(1);
+      .eq('student_id', me.sid).eq('date', date).order('created_at', { ascending: false }).limit(1);
     const statusEl = document.getElementById('lvStatus');
     if (data && data.length) {
       const r = data[0];
       statusEl.classList.add('show');
       statusEl.innerHTML = r.type === '결석'
-        ? `<b>오늘 결석 신청 완료</b> · 사유: ${escHtml(r.reason || '-')}<br>출석 상태: <b style="color:#e2574c">인정결석</b>으로 처리되었습니다.`
-        : `<b>오늘 지각 신청 완료</b> · 등원 예정: ${escHtml(r.arrival_time || '-')} · 사유: ${escHtml(r.reason || '-')}`;
+        ? `<b>${escHtml(date)} 결석 신청 완료</b> · 사유: ${escHtml(r.reason || '-')}<br>출석 상태: <b style="color:#e2574c">인정결석</b>으로 처리되었습니다.`
+        : `<b>${escHtml(date)} 지각 신청 완료</b> · 등원 예정: ${escHtml(r.arrival_time || '-')} · 사유: ${escHtml(r.reason || '-')}`;
     } else {
       statusEl.classList.remove('show');
       statusEl.innerHTML = '';
@@ -366,12 +368,13 @@
     const me = window.session.get();
     const reason = document.getElementById('lvAbsentReason').value.trim();
     const errEl = document.getElementById('lvAbsentError');
+    const date = lvSelectedDate();
+    if (!date) { errEl.textContent = '날짜를 선택해주세요.'; return; }
     if (!reason) { errEl.textContent = '사유를 입력해주세요.'; return; }
     errEl.textContent = '';
-    const today = lvTodayStr();
-    await window.sb.from('leave_requests').insert({ student_id: me.sid, date: today, type: '결석', reason });
+    await window.sb.from('leave_requests').insert({ student_id: me.sid, date, type: '결석', reason });
     await window.sb.from('attendance_overrides').upsert(
-      { student_id: me.sid, date: today, status: 'excused', reason },
+      { student_id: me.sid, date, status: 'excused', reason },
       { onConflict: 'student_id,date' }
     );
     document.getElementById('lvAbsentReason').value = '';
@@ -383,10 +386,11 @@
     const time = document.getElementById('lvArrivalTime').value;
     const reason = document.getElementById('lvLateReason').value.trim();
     const errEl = document.getElementById('lvLateError');
+    const date = lvSelectedDate();
+    if (!date) { errEl.textContent = '날짜를 선택해주세요.'; return; }
     if (!time || !reason) { errEl.textContent = '등원 예정 시간과 사유를 모두 입력해주세요.'; return; }
     errEl.textContent = '';
-    const today = lvTodayStr();
-    await window.sb.from('leave_requests').insert({ student_id: me.sid, date: today, type: '지각', reason, arrival_time: time });
+    await window.sb.from('leave_requests').insert({ student_id: me.sid, date, type: '지각', reason, arrival_time: time });
     document.getElementById('lvLateReason').value = '';
     document.getElementById('lvArrivalTime').value = '';
     await loadLeave();

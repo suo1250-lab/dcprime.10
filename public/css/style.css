@@ -110,6 +110,11 @@ img { display: block; }
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
 .tab-btn svg { flex-shrink: 0; }
 
+@media (max-width: 480px) {
+  .chat-header .tab-bar { flex-wrap: wrap; }
+  .chat-header .tab-btn { flex: 0 0 50%; font-size: 12px; }
+}
+
 /* 탭 패널 */
 .tab-panel { display: none; flex: 1; overflow-y: auto; }
 .tab-panel.active { display: flex; flex-direction: column; }

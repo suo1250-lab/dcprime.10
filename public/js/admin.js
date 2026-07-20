@@ -110,7 +110,10 @@
     const menu = document.createElement('div');
     menu.id = 'attMenu';
     menu.style.cssText = 'position:fixed;z-index:1000;background:#fff;border:1px solid #e2e5ee;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;min-width:150px';
-    menu.innerHTML = opts.map(o => `<button class="att-opt" data-v="${o.v}" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:14px;color:${o.c};font-weight:700;cursor:pointer;text-align:left">${o.t}${(cur||'')===o.v?' · 현재':''}</button>`).join('');
+    menu.innerHTML = opts.map(o => `<button class="att-opt" data-v="${o.v}" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:14px;color:${o.c};font-weight:700;cursor:pointer;text-align:left">${o.t}${(cur||'')===o.v?' · 현재':''}</button>`).join('')
+      + `<div style="border-top:1px solid #eceef4;margin-top:4px;padding-top:4px">
+           <button class="att-reason-btn" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:13px;color:#6b7280;font-weight:600;cursor:pointer;text-align:left">📋 지각/결석 사유보기</button>
+         </div>`;
     document.body.appendChild(menu);
     let top = r.bottom + 4, left = r.left;
     if (top + menu.offsetHeight > window.innerHeight) top = r.top - menu.offsetHeight - 4;
@@ -121,7 +124,35 @@
       closeStatusMenu();
       applyStatus(sid, date, b.dataset.v || null, cur);
     }));
+    menu.querySelector('.att-reason-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeStatusMenu();
+      showLeaveReasonModal(sid, date);
+    });
     setTimeout(() => document.addEventListener('click', closeStatusMenu, { once: true }), 0);
+  }
+
+  async function showLeaveReasonModal(sid, date) {
+    const { data } = await sb.from('leave_requests').select('*')
+      .eq('student_id', sid).eq('date', date).order('created_at', { ascending: false });
+    const rows = data || [];
+    const body = rows.length
+      ? rows.map(r => `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f0f1f5">
+          <div style="font-weight:800;font-size:14px;color:${r.type==='결석'?'#e2574c':'#f59e0b'};margin-bottom:4px">${esc(r.type)}${r.type==='지각' && r.arrival_time ? ` · 등원예정 ${esc(r.arrival_time)}` : ''}</div>
+          <div style="font-size:13px;color:#444;line-height:1.6">${esc(r.reason || '-')}</div>
+          <div style="font-size:11px;color:#aab0bf;margin-top:4px">${esc(new Date(r.created_at).toLocaleString('ko-KR'))} 신청</div>
+        </div>`).join('')
+      : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">신청 내역이 없습니다.</p>';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:22px;max-width:360px;width:90%;max-height:70vh;overflow:auto">
+      <h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#1f2430">지각/결석 사유 · ${esc(date)}</h3>
+      ${body}
+      <button id="lvReasonClose" style="margin-top:6px;width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f8;color:#444;font-weight:700;font-size:13px;cursor:pointer">닫기</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#lvReasonClose').addEventListener('click', () => overlay.remove());
   }
 
   async function setOverride(sid, date, status) {
@@ -157,11 +188,12 @@
     await fetchStudents();
     const days = [...Array(7)].map((_, i) => { const d = new Date(weekStart); d.setDate(d.getDate()+i); return d; });
     const from = fmt(days[0]), to = fmt(days[6]);
-    const [tt, lg, ov, gl] = await Promise.all([
+    const [tt, lg, ov, gl, lv] = await Promise.all([
       sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
       sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
       sb.from('attendance_overrides').select('student_id,date,status').gte('date', from).lte('date', to),
       sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
+      sb.from('leave_requests').select('student_id,date,type,reason,arrival_time').gte('date', from).lte('date', to),
     ]);
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
     const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
@@ -188,6 +220,14 @@
     ws['!cols'] = [{ wch: 10 }, { wch: 7 }, ...days.map(() => ({ wch: 11 }))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '출석');
+
+    const nameMap = new Map(studentsCache.map(s => [s.id, s.name]));
+    const lvRows = [['학생','날짜','구분','사유','등원예정시간']];
+    (lv.data||[]).forEach(r => lvRows.push([nameMap.get(r.student_id) || r.student_id, r.date, r.type, r.reason || '', r.arrival_time || '']));
+    const ws2 = XLSX.utils.aoa_to_sheet(lvRows);
+    ws2['!cols'] = [{ wch: 10 }, { wch: 11 }, { wch: 7 }, { wch: 30 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws2, '지각결석사유');
+
     XLSX.writeFile(wb, `출석부_${from}_${to}.xlsx`);
   });
 
