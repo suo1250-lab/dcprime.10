@@ -43,7 +43,7 @@
   // ═══════════════ 출석 관리 ═══════════════
   const startOfWeek = d => { const x = new Date(d); const dy = (x.getDay()+6)%7; x.setDate(x.getDate()-dy); x.setHours(0,0,0,0); return x; };
   let weekStart = startOfWeek(new Date());
-  const SYMB = { present:{t:'○',c:'#10b981'}, partial:{t:'△',c:'#f59e0b'}, absent:{t:'✕',c:'#e2574c'} };
+  const SYMB = { present:{t:'○',c:'#10b981'}, partial:{t:'△',c:'#f59e0b'}, absent:{t:'✕',c:'#e2574c'}, excused:{t:'Ⓧ',c:'#8b5cf6'} };
 
   function autoStatus(key, ttSet, logSet) {
     const first = ttSet.has(key), second = logSet.has(key);
@@ -61,12 +61,13 @@
     const [tt, lg, ov, gl] = await Promise.all([
       sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
       sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
-      sb.from('attendance_overrides').select('student_id,date,status').gte('date', from).lte('date', to),
+      sb.from('attendance_overrides').select('student_id,date,status,reason').gte('date', from).lte('date', to),
       sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
     ]);
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
     const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
     const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
+    const reasonMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.reason]));
     const glAgg = {};
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
 
@@ -83,7 +84,8 @@
         const g = glAgg[key];
         const rate = g && g.total ? Math.round(g.done/g.total*100) : null;
         const rateTxt = rate==null ? '' : `<div style="font-size:10px;font-weight:600;color:#8b92a4;text-decoration:none">${rate}%</div>`;
-        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}${rateTxt}</td>`;
+        const reason = st === 'excused' ? esc(reasonMap.get(key) || '') : '';
+        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" title="${reason}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}${rateTxt}</td>`;
       }).join('')}
     </tr>`).join('') || `<tr><td>학생이 없습니다.</td></tr>`;
 
@@ -102,6 +104,7 @@
       { v:'present', t:'○ 출석', c:'#10b981' },
       { v:'partial', t:'△ 부분', c:'#f59e0b' },
       { v:'absent',  t:'✕ 미출석', c:'#e2574c' },
+      { v:'excused', t:'Ⓧ 인정결석', c:'#8b5cf6' },
       { v:'',        t:'↩ 자동으로', c:'#6b7280' },
     ];
     const menu = document.createElement('div');
@@ -167,7 +170,7 @@
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
 
     const dn = ['일','월','화','수','목','금','토'];
-    const SYM = { present:'○', partial:'△', absent:'✕' };
+    const SYM = { present:'○', partial:'△', absent:'✕', excused:'Ⓧ' };
     const header = ['학생','캠퍼스', ...days.map(d => `${d.getMonth()+1}/${d.getDate()}(${dn[d.getDay()]})`)];
     const rows = [header];
     studentsCache.forEach(s => {
