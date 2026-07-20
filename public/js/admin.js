@@ -67,7 +67,6 @@
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
     const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
     const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
-    const reasonMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.reason]));
     const glAgg = {};
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
 
@@ -75,7 +74,9 @@
     $('attendanceHead').innerHTML =
       `<tr><th style="text-align:left">학생</th>${days.map(d=>`<th>${d.getMonth()+1}/${d.getDate()}<br><small style="color:#9098a8">${dn[d.getDay()]}</small></th>`).join('')}</tr>`;
     $('attendanceBody').innerHTML = studentsCache.map(s => `<tr>
-      <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}<br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
+      <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}
+        <button class="btn-ghost-sm lv-reason-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="font-size:10.5px;padding:2px 8px;margin-left:4px;font-weight:600">결석사유보기</button>
+        <br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
       ${days.map(d => {
         const date = fmt(d), key = s.id+'|'+date;
         const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
@@ -84,8 +85,7 @@
         const g = glAgg[key];
         const rate = g && g.total ? Math.round(g.done/g.total*100) : null;
         const rateTxt = rate==null ? '' : `<div style="font-size:10px;font-weight:600;color:#8b92a4;text-decoration:none">${rate}%</div>`;
-        const reason = st === 'excused' ? esc(reasonMap.get(key) || '') : '';
-        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" title="${reason}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}${rateTxt}</td>`;
+        return `<td class="att-cell" data-sid="${s.id}" data-date="${date}" style="text-align:center;font-size:18px;font-weight:800;color:${sy.c};cursor:pointer${over}">${sy.t}${rateTxt}</td>`;
       }).join('')}
     </tr>`).join('') || `<tr><td>학생이 없습니다.</td></tr>`;
 
@@ -93,6 +93,37 @@
       e.stopPropagation();
       openStatusMenu(c, c.dataset.sid, c.dataset.date, ovMap.has(c.dataset.sid+'|'+c.dataset.date) ? ovMap.get(c.dataset.sid+'|'+c.dataset.date) : null);
     }));
+    document.querySelectorAll('.lv-reason-btn').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showLeaveReasonByStudent(b.dataset.id, b.dataset.name);
+    }));
+  }
+
+  async function showLeaveReasonByStudent(sid, name) {
+    const { data } = await sb.from('leave_requests').select('*').eq('student_id', sid).order('date', { ascending: false });
+    const rows = data || [];
+    const byDate = {};
+    rows.forEach(r => { (byDate[r.date] ||= []).push(r); });
+    const body = rows.length
+      ? Object.entries(byDate).map(([date, arr]) => `
+        <div style="margin-bottom:14px">
+          <p style="font-weight:700;color:#444;margin-bottom:6px;font-size:13px">${esc(date)}</p>
+          ${arr.map(r => `<div style="padding:10px 12px;background:#f8f9fb;border-radius:10px;margin-bottom:6px">
+            <div style="font-weight:800;font-size:13px;color:${r.type==='결석'?'#e2574c':'#f59e0b'}">${esc(r.type)}${r.type==='지각' && r.arrival_time ? ` · 등원예정 ${esc(r.arrival_time)}` : ''}</div>
+            <div style="font-size:12.5px;color:#555;margin-top:3px;line-height:1.5">${esc(r.reason || '-')}</div>
+          </div>`).join('')}
+        </div>`).join('')
+      : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">신청 내역이 없습니다.</p>';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:90%;max-height:75vh;overflow:auto">
+      <h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#1f2430">${esc(name)} 지각/결석 사유</h3>
+      ${body}
+      <button id="lvReasonClose" style="margin-top:6px;width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f8;color:#444;font-weight:700;font-size:13px;cursor:pointer">닫기</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#lvReasonClose').addEventListener('click', () => overlay.remove());
   }
 
   // 셀 탭 → 선택 메뉴 (오터치로 바로 안 바뀌게)
