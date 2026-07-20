@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>DC Prime</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Noto Sans KR',sans-serif; background:#0f1115; color:#e6e8ee; min-height:100vh; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 60px 20px; }
+  .gate { max-width: 320px; margin: 120px auto; text-align:center; }
+  .gate input { width:100%; padding:14px; border-radius:10px; border:1px solid #2a2e38; background:#1a1d24; color:#fff; font-size:20px; text-align:center; letter-spacing:8px; }
+  .gate button { width:100%; margin-top:12px; padding:14px; border:none; border-radius:10px; background:#3b82f6; color:#fff; font-weight:700; font-size:14px; cursor:pointer; }
+  .gate p.err { color:#e2574c; font-size:13px; margin-top:10px; min-height:16px; }
+  table { width:100%; border-collapse: collapse; font-size:13px; }
+  th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #23262f; white-space:nowrap; }
+  th { color:#8b92a4; font-weight:600; font-size:12px; }
+  .role-badge { padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+  .role-원장 { background:#3b82f620; color:#3b82f6; }
+  .role-부원장 { background:#8b5cf620; color:#8b5cf6; }
+  .role-튜터 { background:#10b98120; color:#10b981; }
+  h1 { font-size:16px; margin:0 0 20px; color:#8b92a4; font-weight:700; }
+  .empty { color:#8b92a4; text-align:center; padding:40px; }
+  .table-wrap { overflow-x:auto; border:1px solid #23262f; border-radius:12px; }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <h1 style="margin-bottom:20px">SUPER ACCESS</h1>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="20" placeholder="PIN" autocomplete="off" />
+  <button id="pinSubmit">확인</button>
+  <p class="err" id="pinErr"></p>
+</div>
+
+<div class="wrap" id="content" style="display:none">
+  <h1>관리자 로그인 기록 (최근 300건)</h1>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>시간</th><th>이름</th><th>역할</th><th>IP</th><th>기기</th></tr></thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(() => {
+  const gate = document.getElementById('gate');
+  const content = document.getElementById('content');
+  const pinInput = document.getElementById('pinInput');
+  const pinErr = document.getElementById('pinErr');
+  const logBody = document.getElementById('logBody');
+
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmtUA = ua => {
+    if (!ua) return '';
+    if (/iPhone|iPad/i.test(ua)) return 'iOS';
+    if (/Android/i.test(ua)) return 'Android';
+    if (/Windows/i.test(ua)) return 'Windows';
+    if (/Macintosh/i.test(ua)) return 'Mac';
+    return ua.slice(0, 20);
+  };
+
+  async function submit() {
+    const pin = pinInput.value.trim();
+    if (!pin) return;
+    pinErr.textContent = '';
+    try {
+      const res = await fetch('/api/super-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      if (!res.ok) { pinErr.textContent = '접근 거부됨'; pinInput.value = ''; return; }
+      const { logs } = await res.json();
+      gate.style.display = 'none';
+      content.style.display = 'block';
+      if (!logs || !logs.length) {
+        logBody.innerHTML = '';
+        content.innerHTML += '<p class="empty">기록이 없습니다.</p>';
+        return;
+      }
+      logBody.innerHTML = logs.map(l => `<tr>
+        <td>${esc(new Date(l.created_at).toLocaleString('ko-KR'))}</td>
+        <td>${esc(l.sname)}</td>
+        <td><span class="role-badge role-${esc(l.role)}">${esc(l.role)}</span></td>
+        <td>${esc(l.ip)}</td>
+        <td>${esc(fmtUA(l.ua))}</td>
+      </tr>`).join('');
+    } catch {
+      pinErr.textContent = '네트워크 오류';
+    }
+  }
+
+  document.getElementById('pinSubmit').addEventListener('click', submit);
+  pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+})();
+</script>
+
+</body>
+</html>
