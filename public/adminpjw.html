@@ -79,6 +79,11 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
           <button class="btn-ghost-sm" id="todayBtn">오늘</button>
+          <select class="select-input" id="attCampusFilter" style="margin-left:6px">
+            <option value="">전체 캠퍼스</option>
+            <option value="능곡">능곡</option>
+            <option value="장곡">장곡</option>
+          </select>
         </div>
         <div class="toolbar-right">
           <button class="btn-primary-sm" id="exportExcel">
@@ -116,6 +121,11 @@
       <div class="panel-toolbar">
         <h2 class="section-subtitle" style="margin:0">지각/결석 신청 내역</h2>
         <input class="select-input" id="lvMgmtSearch" placeholder="학생 이름 검색" style="max-width:200px" />
+        <select class="select-input" id="lvMgmtCampus" style="max-width:150px">
+          <option value="">전체 캠퍼스</option>
+          <option value="능곡">능곡</option>
+          <option value="장곡">장곡</option>
+        </select>
       </div>
       <div id="lvMgmtList"><p class="empty-text">불러오는 중...</p></div>
     </div>

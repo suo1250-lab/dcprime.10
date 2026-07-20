@@ -72,9 +72,11 @@
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
 
     const dn = ['일','월','화','수','목','금','토'];
+    const attCampus = $('attCampusFilter')?.value || '';
+    const attList = studentsCache.filter(s => !attCampus || s.campus === attCampus);
     $('attendanceHead').innerHTML =
       `<tr><th style="text-align:left">학생</th>${days.map(d=>`<th>${d.getMonth()+1}/${d.getDate()}<br><small style="color:#9098a8">${dn[d.getDay()]}</small></th>`).join('')}</tr>`;
-    $('attendanceBody').innerHTML = studentsCache.map(s => `<tr>
+    $('attendanceBody').innerHTML = attList.map(s => `<tr>
       <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}<br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
       ${days.map(d => {
         const date = fmt(d), key = s.id+'|'+date;
@@ -105,8 +107,14 @@
   }
   function renderLeaveMgmt() {
     const q = ($('lvMgmtSearch')?.value || '').trim();
-    const nameMap = new Map(studentsCache.map(s => [s.id, s.name]));
-    const rows = leaveMgmtCache.filter(r => !q || (nameMap.get(r.student_id) || '').includes(q));
+    const campus = $('lvMgmtCampus')?.value || '';
+    const studentMap = new Map(studentsCache.map(s => [s.id, s]));
+    const rows = leaveMgmtCache.filter(r => {
+      const st = studentMap.get(r.student_id);
+      if (campus && (!st || st.campus !== campus)) return false;
+      if (q && !(st?.name || '').includes(q)) return false;
+      return true;
+    });
     const list = $('lvMgmtList');
     if (!list) return;
     if (!rows.length) { list.innerHTML = '<p class="empty-text">신청 내역이 없습니다.</p>'; return; }
@@ -116,7 +124,7 @@
       <div style="margin-bottom:18px">
         <p style="font-weight:700;color:#444;margin-bottom:8px;font-size:14px">${esc(date)}</p>
         ${arr.map(r => `<div style="background:#fff;border:1px solid #eceef4;border-radius:12px;padding:12px 14px;margin-bottom:8px">
-          <span style="font-weight:700;font-size:13px">${esc(nameMap.get(r.student_id) || '알 수 없음')}</span>
+          <span style="font-weight:700;font-size:13px">${esc(studentMap.get(r.student_id)?.name || '알 수 없음')}</span>
           <span style="font-size:11px;font-weight:700;color:${r.type==='결석'?'#e2574c':'#f59e0b'};background:${r.type==='결석'?'#fdeceb':'#fff7e6'};padding:2px 8px;border-radius:999px;margin-left:6px">${esc(r.type)}</span>
           ${r.type==='지각' && r.arrival_time ? `<span style="font-size:12px;color:#9098a8;margin-left:6px">등원예정 ${esc(r.arrival_time)}</span>` : ''}
           <div style="font-size:12.5px;color:#666;margin-top:4px">${esc(r.reason || '-')}</div>
@@ -124,6 +132,7 @@
       </div>`).join('');
   }
   $('lvMgmtSearch')?.addEventListener('input', renderLeaveMgmt);
+  $('lvMgmtCampus')?.addEventListener('change', renderLeaveMgmt);
 
   // 셀 탭 → 선택 메뉴 (오터치로 바로 안 바뀌게)
   function closeStatusMenu() { document.getElementById('attMenu')?.remove(); }
@@ -181,6 +190,7 @@
   $('weekPrev')?.addEventListener('click', () => { weekStart.setDate(weekStart.getDate()-7); loadAttendance(); });
   $('weekNext')?.addEventListener('click', () => { weekStart.setDate(weekStart.getDate()+7); loadAttendance(); });
   $('todayBtn')?.addEventListener('click', () => { weekStart = startOfWeek(new Date()); loadAttendance(); });
+  $('attCampusFilter')?.addEventListener('change', loadAttendance);
 
   // 출석표 엑셀 내보내기 (현재 주)
   $('exportExcel')?.addEventListener('click', async () => {
