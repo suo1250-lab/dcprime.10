@@ -46,6 +46,9 @@ export default {
         return new Response(JSON.stringify({
           hasServiceKey: !!env.SUPABASE_SERVICE_KEY,
           hasSuperPin: !!env.SUPER_PIN,
+          serviceKeyLen: (env.SUPABASE_SERVICE_KEY || '').length,
+          serviceKeyHead: (env.SUPABASE_SERVICE_KEY || '').slice(0, 10),
+          serviceKeyTail: (env.SUPABASE_SERVICE_KEY || '').slice(-10),
         }), { headers: { 'Content-Type': 'application/json' } });
       }
 
