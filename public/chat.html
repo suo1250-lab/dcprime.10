@@ -312,9 +312,9 @@
       { key: '기타', color: '#8b5cf6' },
       { key: '지우개', color: '#cbd2e0', erase: true },
     ];
-    // 10:00 ~ 22:00, 30분 단위 (24칸)
+    // 08:00 ~ 24:00, 30분 단위 (32칸)
     const SLOTS = [];
-    for (let m = 600; m < 1320; m += 30) {
+    for (let m = 480; m < 1440; m += 30) {
       const h = Math.floor(m / 60), mm = m % 60;
       SLOTS.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
     }

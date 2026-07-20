@@ -259,7 +259,7 @@
 
   // 시간표 모달
   const TT_COLORS = { '스카':'#3b82f6','식사':'#f59e0b','학원수업':'#10b981','기타':'#8b5cf6','국어':'#e2574c','영어':'#3b82f6','수학':'#10b981','과학':'#f59e0b' };
-  const ttSlots = (() => { const a = []; for (let m=600;m<1320;m+=30){ const h=Math.floor(m/60),mm=m%60; a.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`); } return a; })();
+  const ttSlots = (() => { const a = []; for (let m=480;m<1440;m+=30){ const h=Math.floor(m/60),mm=m%60; a.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`); } return a; })();
 
   function showTimetableModal(name, slots) {
     const baseKey = k => k ? k.split(':')[0] : k;
