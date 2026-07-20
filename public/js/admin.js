@@ -27,7 +27,7 @@
   // ── 탭 전환 ──
   const tabBtns = document.querySelectorAll('.tab-btn');
   const panels = {
-    attendance: $('tabAttendance'), study: $('tabStudy'),
+    attendance: $('tabAttendance'), leave: $('tabLeaveMgmt'), study: $('tabStudy'),
     analysis: $('tabAnalysis'), students: $('tabStudents'),
   };
   tabBtns.forEach(b => b.addEventListener('click', () => {
@@ -35,6 +35,7 @@
     tabBtns.forEach(x => x.classList.toggle('active', x.dataset.tab === t));
     Object.entries(panels).forEach(([k, p]) => p?.classList.toggle('active', k === t));
     if (t === 'attendance') loadAttendance();
+    if (t === 'leave')      loadLeaveMgmt();
     if (t === 'study')      loadStudy();
     if (t === 'analysis')   loadConsultStudents();
     if (t === 'students')   loadStudents();
@@ -74,9 +75,7 @@
     $('attendanceHead').innerHTML =
       `<tr><th style="text-align:left">학생</th>${days.map(d=>`<th>${d.getMonth()+1}/${d.getDate()}<br><small style="color:#9098a8">${dn[d.getDay()]}</small></th>`).join('')}</tr>`;
     $('attendanceBody').innerHTML = studentsCache.map(s => `<tr>
-      <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}
-        <button class="btn-ghost-sm lv-reason-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="font-size:10.5px;padding:2px 8px;margin-left:4px;font-weight:600">결석사유보기</button>
-        <br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
+      <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}<br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
       ${days.map(d => {
         const date = fmt(d), key = s.id+'|'+date;
         const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
@@ -93,38 +92,38 @@
       e.stopPropagation();
       openStatusMenu(c, c.dataset.sid, c.dataset.date, ovMap.has(c.dataset.sid+'|'+c.dataset.date) ? ovMap.get(c.dataset.sid+'|'+c.dataset.date) : null);
     }));
-    document.querySelectorAll('.lv-reason-btn').forEach(b => b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showLeaveReasonByStudent(b.dataset.id, b.dataset.name);
-    }));
   }
 
-  async function showLeaveReasonByStudent(sid, name) {
-    const { data } = await sb.from('leave_requests').select('*').eq('student_id', sid).order('date', { ascending: false });
-    const rows = data || [];
+  // ═══════════════ 지각/결석 관리 ═══════════════
+  let leaveMgmtCache = [];
+  async function loadLeaveMgmt() {
+    await fetchStudents();
+    const { data } = await sb.from('leave_requests').select('*')
+      .order('date', { ascending: false }).order('created_at', { ascending: false });
+    leaveMgmtCache = data || [];
+    renderLeaveMgmt();
+  }
+  function renderLeaveMgmt() {
+    const q = ($('lvMgmtSearch')?.value || '').trim();
+    const nameMap = new Map(studentsCache.map(s => [s.id, s.name]));
+    const rows = leaveMgmtCache.filter(r => !q || (nameMap.get(r.student_id) || '').includes(q));
+    const list = $('lvMgmtList');
+    if (!list) return;
+    if (!rows.length) { list.innerHTML = '<p class="empty-text">신청 내역이 없습니다.</p>'; return; }
     const byDate = {};
     rows.forEach(r => { (byDate[r.date] ||= []).push(r); });
-    const body = rows.length
-      ? Object.entries(byDate).map(([date, arr]) => `
-        <div style="margin-bottom:14px">
-          <p style="font-weight:700;color:#444;margin-bottom:6px;font-size:13px">${esc(date)}</p>
-          ${arr.map(r => `<div style="padding:10px 12px;background:#f8f9fb;border-radius:10px;margin-bottom:6px">
-            <div style="font-weight:800;font-size:13px;color:${r.type==='결석'?'#e2574c':'#f59e0b'}">${esc(r.type)}${r.type==='지각' && r.arrival_time ? ` · 등원예정 ${esc(r.arrival_time)}` : ''}</div>
-            <div style="font-size:12.5px;color:#555;margin-top:3px;line-height:1.5">${esc(r.reason || '-')}</div>
-          </div>`).join('')}
-        </div>`).join('')
-      : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">신청 내역이 없습니다.</p>';
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:90%;max-height:75vh;overflow:auto">
-      <h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#1f2430">${esc(name)} 지각/결석 사유</h3>
-      ${body}
-      <button id="lvReasonClose" style="margin-top:6px;width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f8;color:#444;font-weight:700;font-size:13px;cursor:pointer">닫기</button>
-    </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    overlay.querySelector('#lvReasonClose').addEventListener('click', () => overlay.remove());
+    list.innerHTML = Object.entries(byDate).map(([date, arr]) => `
+      <div style="margin-bottom:18px">
+        <p style="font-weight:700;color:#444;margin-bottom:8px;font-size:14px">${esc(date)}</p>
+        ${arr.map(r => `<div style="background:#fff;border:1px solid #eceef4;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">${esc(nameMap.get(r.student_id) || '알 수 없음')}</span>
+          <span style="font-size:11px;font-weight:700;color:${r.type==='결석'?'#e2574c':'#f59e0b'};background:${r.type==='결석'?'#fdeceb':'#fff7e6'};padding:2px 8px;border-radius:999px;margin-left:6px">${esc(r.type)}</span>
+          ${r.type==='지각' && r.arrival_time ? `<span style="font-size:12px;color:#9098a8;margin-left:6px">등원예정 ${esc(r.arrival_time)}</span>` : ''}
+          <div style="font-size:12.5px;color:#666;margin-top:4px">${esc(r.reason || '-')}</div>
+        </div>`).join('')}
+      </div>`).join('');
   }
+  $('lvMgmtSearch')?.addEventListener('input', renderLeaveMgmt);
 
   // 셀 탭 → 선택 메뉴 (오터치로 바로 안 바뀌게)
   function closeStatusMenu() { document.getElementById('attMenu')?.remove(); }
