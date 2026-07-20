@@ -110,10 +110,7 @@
     const menu = document.createElement('div');
     menu.id = 'attMenu';
     menu.style.cssText = 'position:fixed;z-index:1000;background:#fff;border:1px solid #e2e5ee;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;min-width:150px';
-    menu.innerHTML = opts.map(o => `<button class="att-opt" data-v="${o.v}" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:14px;color:${o.c};font-weight:700;cursor:pointer;text-align:left">${o.t}${(cur||'')===o.v?' · 현재':''}</button>`).join('')
-      + `<div style="border-top:1px solid #eceef4;margin-top:4px;padding-top:4px">
-           <button class="att-reason-btn" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:13px;color:#6b7280;font-weight:600;cursor:pointer;text-align:left">📋 지각/결석 사유보기</button>
-         </div>`;
+    menu.innerHTML = opts.map(o => `<button class="att-opt" data-v="${o.v}" style="display:flex;width:100%;align-items:center;gap:8px;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:14px;color:${o.c};font-weight:700;cursor:pointer;text-align:left">${o.t}${(cur||'')===o.v?' · 현재':''}</button>`).join('');
     document.body.appendChild(menu);
     let top = r.bottom + 4, left = r.left;
     if (top + menu.offsetHeight > window.innerHeight) top = r.top - menu.offsetHeight - 4;
@@ -124,35 +121,7 @@
       closeStatusMenu();
       applyStatus(sid, date, b.dataset.v || null, cur);
     }));
-    menu.querySelector('.att-reason-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeStatusMenu();
-      showLeaveReasonModal(sid, date);
-    });
     setTimeout(() => document.addEventListener('click', closeStatusMenu, { once: true }), 0);
-  }
-
-  async function showLeaveReasonModal(sid, date) {
-    const { data } = await sb.from('leave_requests').select('*')
-      .eq('student_id', sid).eq('date', date).order('created_at', { ascending: false });
-    const rows = data || [];
-    const body = rows.length
-      ? rows.map(r => `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f0f1f5">
-          <div style="font-weight:800;font-size:14px;color:${r.type==='결석'?'#e2574c':'#f59e0b'};margin-bottom:4px">${esc(r.type)}${r.type==='지각' && r.arrival_time ? ` · 등원예정 ${esc(r.arrival_time)}` : ''}</div>
-          <div style="font-size:13px;color:#444;line-height:1.6">${esc(r.reason || '-')}</div>
-          <div style="font-size:11px;color:#aab0bf;margin-top:4px">${esc(new Date(r.created_at).toLocaleString('ko-KR'))} 신청</div>
-        </div>`).join('')
-      : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">신청 내역이 없습니다.</p>';
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:22px;max-width:360px;width:90%;max-height:70vh;overflow:auto">
-      <h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#1f2430">지각/결석 사유 · ${esc(date)}</h3>
-      ${body}
-      <button id="lvReasonClose" style="margin-top:6px;width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f8;color:#444;font-weight:700;font-size:13px;cursor:pointer">닫기</button>
-    </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    overlay.querySelector('#lvReasonClose').addEventListener('click', () => overlay.remove());
   }
 
   async function setOverride(sid, date, status) {
@@ -237,13 +206,23 @@
     const campus = $('studyCampusFilter').value;
     const today = todayStr();
     const [ttRes, glRes, glTotalRes] = await Promise.all([
-      sb.from('timetables').select('student_id,slots,campus,seat,submitted').eq('date', today),
-      sb.from('goals').select('student_id,done').eq('date', today),
+      sb.from('timetables').select('student_id,slots,campus,seat,submitted,submitted_at').eq('date', today),
+      sb.from('goals').select('student_id,done,created_at').eq('date', today),
       sb.from('goals').select('student_id,done').lte('date', today),
     ]);
     const ttMap = new Map((ttRes.data||[]).map(t => [t.student_id, t]));
     const goalAgg = {};
-    (glRes.data||[]).forEach(g => { const a = goalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
+    const goalFirstTime = {};
+    (glRes.data||[]).forEach(g => {
+      const a = goalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++;
+      if (!goalFirstTime[g.student_id] || g.created_at < goalFirstTime[g.student_id]) goalFirstTime[g.student_id] = g.created_at;
+    });
+    const fmtSubmitTime = iso => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      const mins = d.getHours() * 60 + d.getMinutes();
+      return { timeTxt: d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), isLate: mins > 600 };
+    };
     const goalTotalAgg = {};
     (glTotalRes.data||[]).forEach(g => { const a = goalTotalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
     const list = studentsCache.filter(s => !campus || s.campus === campus);
@@ -276,6 +255,9 @@
       const rateColor = r => r==null ? '#9098a8' : r>=80 ? '#10b981' : r>=50 ? '#f59e0b' : '#e2574c';
       const gt = goalTotalAgg[s.id];
       const totalRate = gt && gt.total ? Math.round(gt.done/gt.total*100) : null;
+      const ttTime = fmtSubmitTime(tt?.submitted_at);
+      const glTime = fmtSubmitTime(goalFirstTime[s.id]);
+      const lateBadge = ' <b style="color:#e2574c">지각</b>';
       return `<div style="background:#fff;border:1px solid #eceef4;border-radius:14px;padding:16px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div><span style="font-weight:700">${esc(s.name)}</span> <small style="color:#9098a8">${esc(s.grade||'')} ${s.campus?'· '+esc(s.campus):''}</small></div>
@@ -286,6 +268,10 @@
           <span>당일 <span style="color:${rateColor(rate)}">${rate==null?'—':rate+'% ('+g.done+'/'+g.total+')'}</span></span>
           <span style="color:#e2e5ee">|</span>
           <span>전체 누적 <span style="color:${rateColor(totalRate)}">${totalRate==null?'—':totalRate+'% ('+gt.done+'/'+gt.total+')'}</span></span>
+        </div>
+        <div style="margin-top:6px;display:flex;gap:14px;font-size:11.5px;color:#9098a8">
+          <span>시간표 제출 ${ttTime ? esc(ttTime.timeTxt) + (ttTime.isLate ? lateBadge : '') : '—'}</span>
+          <span>목표 작성 ${glTime ? esc(glTime.timeTxt) + (glTime.isLate ? lateBadge : '') : '—'}</span>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
