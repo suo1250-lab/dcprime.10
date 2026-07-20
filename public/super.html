@@ -28,8 +28,11 @@
   .tab-btn { padding:9px 18px; border-radius:999px; border:1px solid #2a2e38; background:#1a1d24; color:#8b92a4; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
   .tab-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
   .role-학생 { background:#f59e0b20; color:#f59e0b; }
-  tr.suspect { background:#e2574c14; }
-  .warn-badge { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; background:#e2574c; color:#fff; }
+  tr.suspect-strong { background:#e2574c1f; }
+  tr.suspect-weak { background:#f59e0b14; }
+  .warn-badge { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+  .warn-strong { background:#e2574c; color:#fff; }
+  .warn-weak { background:#f59e0b; color:#191108; }
 </style>
 </head>
 <body>
@@ -89,7 +92,8 @@
   };
 
   let allLogs = [];
-  let studentIPs = new Set();
+  let studentDeviceMap = new Map(); // `${ip}||${ua}` -> student name
+  let studentIPs = new Map();       // ip -> student name (마지막 기록 기준)
   let activeTab = 'admin';
 
   function render() {
@@ -104,11 +108,23 @@
     }
     document.getElementById('emptyMsg')?.remove();
     logBody.innerHTML = rows.map(l => {
-      const suspect = activeTab === 'admin' && l.ip && studentIPs.has(l.ip);
-      return `<tr class="${suspect ? 'suspect' : ''}">
+      let cls = '', badge = '';
+      if (activeTab === 'admin' && l.ip) {
+        const deviceKey = `${l.ip}||${l.ua || ''}`;
+        const deviceMatch = studentDeviceMap.get(deviceKey);
+        const ipMatch = studentIPs.get(l.ip);
+        if (deviceMatch) {
+          cls = 'suspect-strong';
+          badge = `<span class="warn-badge warn-strong">⚠ ${esc(deviceMatch)} 기기와 완전 일치</span>`;
+        } else if (ipMatch) {
+          cls = 'suspect-weak';
+          badge = `<span class="warn-badge warn-weak">△ ${esc(ipMatch)}와 IP만 동일</span>`;
+        }
+      }
+      return `<tr class="${cls}">
         <td>${esc(new Date(l.created_at).toLocaleString('ko-KR'))}</td>
         <td>${esc(l.sname)}</td>
-        <td><span class="role-badge role-${esc(l.role)}">${esc(l.role)}</span>${suspect ? '<span class="warn-badge">⚠ 학생 IP 일치</span>' : ''}</td>
+        <td><span class="role-badge role-${esc(l.role)}">${esc(l.role)}</span>${badge}</td>
         <td>${esc(l.ip)}${l.loc ? ` (${esc(l.loc)})` : ''}</td>
         <td>${esc(fmtUA(l.ua))}</td>
       </tr>`;
@@ -136,7 +152,12 @@
       gate.style.display = 'none';
       content.style.display = 'block';
       allLogs = logs || [];
-      studentIPs = new Set(allLogs.filter(l => l.role === '학생' && l.ip).map(l => l.ip));
+      studentDeviceMap = new Map();
+      studentIPs = new Map();
+      allLogs.filter(l => l.role === '학생' && l.ip).forEach(l => {
+        studentIPs.set(l.ip, l.sname);
+        studentDeviceMap.set(`${l.ip}||${l.ua || ''}`, l.sname);
+      });
       render();
     } catch {
       pinErr.textContent = '네트워크 오류';
