@@ -389,7 +389,13 @@
           const reason = window.prompt('기타 사유를 입력해주세요 (선택사항)', '');
           if (reason === null) return;
           row.slots[slot] = reason.trim() ? `기타:${reason.trim()}` : '기타';
-        } else row.slots[slot] = sel;
+        } else {
+          if (sel === '식사') {
+            const mealCount = Object.entries(row.slots).filter(([k, v]) => k !== slot && baseKey(v) === '식사').length;
+            if (mealCount >= 4) { alert('식사시간은 점심 저녁 도합 2시간입니다.'); return; }
+          }
+          row.slots[slot] = sel;
+        }
         renderGrid(); persist();
       }));
       renderSummary(row.slots);
