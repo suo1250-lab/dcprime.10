@@ -67,7 +67,9 @@ export default {
         }
         const ip = request.headers.get('CF-Connecting-IP') || '';
         const ua = request.headers.get('User-Agent') || '';
-        await insertLoginLog(env, { sid: body.sid, sname: body.sname || null, role: body.role || null, ip, ua });
+        const cf = request.cf || {};
+        const loc = [cf.city, cf.regionCode || cf.region, cf.country].filter(Boolean).join(', ');
+        await insertLoginLog(env, { sid: body.sid, sname: body.sname || null, role: body.role || null, ip, ua, loc: loc || null });
         return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
       }
 
