@@ -46,9 +46,11 @@
   let weekStart = startOfWeek(new Date());
   const SYMB = { present:{t:'○',c:'#10b981'}, partial:{t:'△',c:'#f59e0b'}, absent:{t:'✕',c:'#e2574c'}, excused:{t:'Ⓧ',c:'#8b5cf6'} };
 
-  function autoStatus(key, ttSet, logSet) {
-    const first = ttSet.has(key), second = logSet.has(key);
-    if (first && second) return 'present';
+  function autoStatus(key, ttSet, glAgg) {
+    const first = ttSet.has(key);
+    const g = glAgg[key];
+    const allGoalsDone = !!(first && g && g.total > 0 && g.done === g.total);
+    if (allGoalsDone) return 'present';
     if (first) return 'partial';
     return 'absent';
   }
@@ -59,14 +61,12 @@
     const from = fmt(days[0]), to = fmt(days[6]);
     $('weekLabel').textContent = `${from} ~ ${to}`;
 
-    const [tt, lg, ov, gl] = await Promise.all([
+    const [tt, ov, gl] = await Promise.all([
       sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
-      sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
       sb.from('attendance_overrides').select('student_id,date,status,reason').gte('date', from).lte('date', to),
       sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
     ]);
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
-    const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
     const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
     const glAgg = {};
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
@@ -80,7 +80,7 @@
       <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(s.name)}<br><small style="color:#9098a8">${esc(s.campus||'')}</small></td>
       ${days.map(d => {
         const date = fmt(d), key = s.id+'|'+date;
-        const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
+        const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, glAgg);
         const sy = SYMB[st] || SYMB.absent;
         const over = ovMap.has(key) ? ';text-decoration:underline' : '';
         const g = glAgg[key];
@@ -197,15 +197,13 @@
     await fetchStudents();
     const days = [...Array(7)].map((_, i) => { const d = new Date(weekStart); d.setDate(d.getDate()+i); return d; });
     const from = fmt(days[0]), to = fmt(days[6]);
-    const [tt, lg, ov, gl, lv] = await Promise.all([
+    const [tt, ov, gl, lv] = await Promise.all([
       sb.from('timetables').select('student_id,date,submitted').gte('date', from).lte('date', to),
-      sb.from('study_logs').select('student_id,date').gte('date', from).lte('date', to),
       sb.from('attendance_overrides').select('student_id,date,status').gte('date', from).lte('date', to),
       sb.from('goals').select('student_id,date,done').gte('date', from).lte('date', to),
       sb.from('leave_requests').select('student_id,date,type,reason,arrival_time').gte('date', from).lte('date', to),
     ]);
     const ttSet = new Set((tt.data||[]).filter(x=>x.submitted).map(x=>x.student_id+'|'+x.date));
-    const logSet = new Set((lg.data||[]).map(x=>x.student_id+'|'+x.date));
     const ovMap = new Map((ov.data||[]).map(x=>[x.student_id+'|'+x.date, x.status]));
     const glAgg = {};
     (gl.data||[]).forEach(g => { const a = glAgg[g.student_id+'|'+g.date] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++; });
@@ -218,7 +216,7 @@
       const row = [s.name, s.campus || ''];
       days.forEach(d => {
         const date = fmt(d), key = s.id+'|'+date;
-        const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, logSet);
+        const st = ovMap.has(key) ? ovMap.get(key) : autoStatus(key, ttSet, glAgg);
         const g = glAgg[key];
         const rate = g && g.total ? ` ${Math.round(g.done/g.total*100)}%` : '';
         row.push(SYM[st] + rate);
