@@ -355,7 +355,7 @@
   function showGoalsModal(name, goals) {
     const body = goals.length
       ? goals.map(g => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8f9fb;border-radius:10px;margin-bottom:6px">
-          <span style="flex-shrink:0;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:${g.done?'#10b981':'#cbd2e0'}">${g.done?'✓':''}</span>
+          <span style="flex-shrink:0;width:20px;height:20px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:${g.done?'#10b981':'#fff'};border:2px solid ${g.done?'#10b981':'#cbd2e0'}">${g.done?'✓':''}</span>
           <span style="font-size:13.5px;color:${g.done?'#9098a8':'#1f2430'};text-decoration:${g.done?'line-through':'none'}">${esc(g.text)}</span>
         </div>`).join('')
       : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">오늘 등록된 목표가 없습니다.</p>';
