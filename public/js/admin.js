@@ -665,10 +665,10 @@
     if (!currentConsults.length) { list.innerHTML = '<p class="empty-text">상담 기록이 없습니다.</p>'; return; }
     list.innerHTML = data.map(c => `<div style="border:1px solid #eceef4;border-radius:12px;padding:14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>${esc(c.date||'')}</b><span style="color:#8b92a4;font-size:13px">${esc(c.counselor||'')}</span></div>
-      ${c.content?`<p style="margin:4px 0"><b>내용</b> · ${esc(c.content)}</p>`:''}
-      ${c.strength?`<p style="margin:4px 0;color:#10b981"><b>강점</b> · ${esc(c.strength)}</p>`:''}
-      ${c.weakness?`<p style="margin:4px 0;color:#e2574c"><b>약점</b> · ${esc(c.weakness)}</p>`:''}
-      ${c.next_goal?`<p style="margin:4px 0;color:#3b82f6"><b>다음목표</b> · ${esc(c.next_goal)}</p>`:''}
+      ${c.content?`<p style="margin:4px 0;white-space:pre-wrap"><b>내용</b> · ${esc(c.content)}</p>`:''}
+      ${c.strength?`<p style="margin:4px 0;color:#10b981;white-space:pre-wrap"><b>강점</b> · ${esc(c.strength)}</p>`:''}
+      ${c.weakness?`<p style="margin:4px 0;color:#e2574c;white-space:pre-wrap"><b>약점</b> · ${esc(c.weakness)}</p>`:''}
+      ${c.next_goal?`<p style="margin:4px 0;color:#3b82f6;white-space:pre-wrap"><b>다음목표</b> · ${esc(c.next_goal)}</p>`:''}
       <button class="btn-ghost-sm del-consult" data-id="${c.id}" style="margin-top:6px">삭제</button>
     </div>`).join('');
     list.querySelectorAll('.del-consult').forEach(b => b.addEventListener('click', async () => {
