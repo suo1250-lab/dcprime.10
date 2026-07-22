@@ -247,15 +247,17 @@
     const today = todayStr();
     const [ttRes, glRes, glTotalRes] = await Promise.all([
       sb.from('timetables').select('student_id,slots,campus,seat,submitted,submitted_at').eq('date', today),
-      sb.from('goals').select('student_id,done,created_at').eq('date', today),
+      sb.from('goals').select('student_id,text,done,created_at').eq('date', today).order('sort_order').order('created_at'),
       sb.from('goals').select('student_id,done').lte('date', today),
     ]);
     const ttMap = new Map((ttRes.data||[]).map(t => [t.student_id, t]));
     const goalAgg = {};
     const goalFirstTime = {};
+    const goalsByStudent = {};
     (glRes.data||[]).forEach(g => {
       const a = goalAgg[g.student_id] ||= { done:0, total:0 }; a.total++; if (g.done) a.done++;
       if (!goalFirstTime[g.student_id] || g.created_at < goalFirstTime[g.student_id]) goalFirstTime[g.student_id] = g.created_at;
+      (goalsByStudent[g.student_id] ||= []).push(g);
     });
     const fmtSubmitTime = iso => {
       if (!iso) return null;
@@ -316,12 +318,14 @@
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           ${tt?.submitted ? `<span style="font-size:12px;color:#10b981;background:#e7f7f0;padding:3px 10px;border-radius:999px">제출완료 (좌석 ${esc(tt.seat||'-')})</span>` : '<span style="font-size:12px;color:#9098a8">미제출</span>'}
           <button class="btn-ghost-sm tt-view-btn" data-id="${s.id}" data-name="${esc(s.name)}">시간표 보기</button>
+          <button class="btn-ghost-sm goals-view-btn" data-id="${s.id}" data-name="${esc(s.name)}">목표 보기</button>
           <button class="btn-ghost-sm photos-btn" data-id="${s.id}" data-name="${esc(s.name)}" style="margin-left:auto">인증사진 모아보기</button>
         </div>
       </div>`;
     }).join('') || '<p class="empty-text">해당 학생이 없습니다.</p>';
 
     document.querySelectorAll('.tt-view-btn').forEach(b => b.addEventListener('click', () => showTimetableModal(b.dataset.name, ttMap.get(b.dataset.id)?.slots || {})));
+    document.querySelectorAll('.goals-view-btn').forEach(b => b.addEventListener('click', () => showGoalsModal(b.dataset.name, goalsByStudent[b.dataset.id] || [])));
     document.querySelectorAll('.photos-btn').forEach(b => b.addEventListener('click', () => showStudentPhotos(b.dataset.id, b.dataset.name)));
     $('studyLogList').innerHTML = '<p class="empty-text">학생 카드의 "인증사진 모아보기"를 누르면 날짜별 사진이 표시됩니다.</p>';
   }
@@ -347,6 +351,25 @@
 
   $('ttModalClose')?.addEventListener('click', () => $('ttModal').classList.remove('show'));
   $('ttModal')?.addEventListener('click', e => { if(e.target===$('ttModal')) $('ttModal').classList.remove('show'); });
+
+  function showGoalsModal(name, goals) {
+    const body = goals.length
+      ? goals.map(g => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8f9fb;border-radius:10px;margin-bottom:6px">
+          <span style="flex-shrink:0;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:${g.done?'#10b981':'#cbd2e0'}">${g.done?'✓':''}</span>
+          <span style="font-size:13.5px;color:${g.done?'#9098a8':'#1f2430'};text-decoration:${g.done?'line-through':'none'}">${esc(g.text)}</span>
+        </div>`).join('')
+      : '<p style="color:#9098a8;font-size:13px;text-align:center;padding:20px 0">오늘 등록된 목표가 없습니다.</p>';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:90%;max-height:75vh;overflow:auto">
+      <h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#1f2430">${esc(name)} 오늘의 목표</h3>
+      ${body}
+      <button id="goalsModalClose" style="margin-top:6px;width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f8;color:#444;font-weight:700;font-size:13px;cursor:pointer">닫기</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#goalsModalClose').addEventListener('click', () => overlay.remove());
+  }
 
   // 학생 인증사진: 날짜별 표출 + ZIP 다운로드
   async function showStudentPhotos(sid, name) {
