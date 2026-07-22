@@ -244,10 +244,13 @@
 
       let image_path = null;
       if (currentFile) {
+        if (!currentFile.size) {
+          throw new Error('사진을 불러오지 못했어요. 아이폰이면 사진이 iCloud에서 완전히 다운로드된 후 다시 선택해주세요.');
+        }
         const ext = (currentFile.name.split('.').pop() || 'jpg').toLowerCase();
         const path = `${me.sid}/${Date.now()}.${ext}`;
         const { error: upErr } = await sb.storage.from('ten-uploads').upload(path, currentFile, { upsert: true, contentType: currentFile.type });
-        if (upErr) throw new Error(upErr.message);
+        if (upErr) throw new Error('사진 업로드 실패: ' + upErr.message);
         image_path = sb.storage.from('ten-uploads').getPublicUrl(path).data.publicUrl;
       }
 
