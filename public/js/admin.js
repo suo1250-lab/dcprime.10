@@ -371,32 +371,39 @@
     overlay.querySelector('#goalsModalClose').addEventListener('click', () => overlay.remove());
   }
 
-  // 학생 인증사진: 날짜별 표출 + ZIP 다운로드
+  // 학생 인증사진+메모: 날짜별 표출 + ZIP 다운로드
   async function showStudentPhotos(sid, name) {
     const wrap = $('studyLogList');
     wrap.innerHTML = '<p class="empty-text">불러오는 중...</p>';
     const { data: logs } = await sb.from('study_logs').select('*')
-      .eq('student_id', sid).not('image_path', 'is', null).order('date', { ascending: false });
-    if (!logs || !logs.length) { wrap.innerHTML = `<p class="empty-text">${esc(name)} 학생의 인증 사진이 없습니다.</p>`; return; }
+      .eq('student_id', sid).order('date', { ascending: false }).order('created_at', { ascending: false });
+    if (!logs || !logs.length) { wrap.innerHTML = `<p class="empty-text">${esc(name)} 학생의 학습 인증 기록이 없습니다.</p>`; return; }
 
+    const photoLogs = logs.filter(l => l.image_path);
     // 날짜별 그룹
     const byDate = {};
     logs.forEach(l => { (byDate[l.date] ||= []).push(l); });
 
     wrap.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 class="section-subtitle" style="margin:0">${esc(name)} 인증사진 (${logs.length}장)</h3>
-        <button class="btn-primary-sm" id="zipBtn">전체 ZIP 다운로드</button>
+        <h3 class="section-subtitle" style="margin:0">${esc(name)} 학습 인증 (사진 ${photoLogs.length}장 · 전체 ${logs.length}건)</h3>
+        <button class="btn-primary-sm" id="zipBtn" ${photoLogs.length ? '' : 'disabled'}>전체 ZIP 다운로드</button>
       </div>` +
       Object.entries(byDate).map(([date, arr]) => `
         <div style="margin-bottom:16px">
           <p style="font-weight:700;color:#444;margin-bottom:8px">${esc(date)}</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-            ${arr.map(l => `<a href="${esc(l.image_path)}" target="_blank"><img src="${esc(l.image_path)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #eceef4" /></a>`).join('')}
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+            ${arr.map(l => `<div style="border:1px solid #eceef4;border-radius:10px;overflow:hidden;background:#fff">
+              ${l.image_path ? `<a href="${esc(l.image_path)}" target="_blank"><img src="${esc(l.image_path)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" /></a>` : ''}
+              <div style="padding:8px 10px">
+                <div style="font-size:11.5px;font-weight:700;color:#3b82f6">${esc(l.subject || '-')}${l.estimated_hours ? ` · ${esc(String(l.estimated_hours))}h` : ''}</div>
+                ${l.summary ? `<div style="font-size:12px;color:#555;margin-top:4px;line-height:1.5;white-space:pre-wrap">${esc(l.summary)}</div>` : ''}
+              </div>
+            </div>`).join('')}
           </div>
         </div>`).join('');
 
-    $('zipBtn').addEventListener('click', () => downloadZip(name, logs));
+    $('zipBtn')?.addEventListener('click', () => downloadZip(name, photoLogs));
   }
 
   async function downloadZip(name, logs) {
